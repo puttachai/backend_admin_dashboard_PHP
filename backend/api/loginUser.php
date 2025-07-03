@@ -10,12 +10,12 @@ require 'conndb.php'; // เชื่อมต่อผ่าน PDO แล้�
 $input = file_get_contents("php://input");
 $data = json_decode($input, true);
 
-if (!isset($data['email']) || !isset($data['password'])) {
+if (!isset($data['account']) || !isset($data['password'])) {
     echo json_encode(["success" => false, "message" => "Missing email or password"]);
     exit;
 }
 
-$email = $data['email'];
+$email = $data['account'];
 $password = $data['password'];
 
 // เข้ารหัสด้วย SHA-512
