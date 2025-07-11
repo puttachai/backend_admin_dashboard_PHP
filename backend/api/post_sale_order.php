@@ -158,21 +158,107 @@ try {
             delivery_date, tracking_no, delivery_type, total_discount, delivery_fee, 
             final_total_price
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    
+
         $stmtInsertOrder->execute([
-            $documentNo, $_POST['listCode'] ?? '', $sellDate, $_POST['reference'] ?? '',
-            $_POST['channel'] ?? '', $_POST['taxType'] ?? '', $_POST['fullName'] ?? '',
-            $_POST['customerCode'] ?? '', $_POST['phone'] ?? '', $_POST['email'] ?? '',
-            $_POST['address'] ?? '', $_POST['receiverName'] ?? '', $_POST['receiverPhone'] ?? '',
-            $_POST['receiverEmail'] ?? '', $_POST['receiverAddress'] ?? '', $_POST['note'] ?? '',
-            $deliveryDate, $_POST['trackingNo'] ?? '', $_POST['deliveryType'] ?? '',
-            $_POST['totalDiscount'] ?? 0, $_POST['deliveryFee'] ?? 0, $_POST['final_total_price'] ?? 0
+            $documentNo,
+            $_POST['listCode'] ?? '',
+            $sellDate,
+            $_POST['reference'] ?? '',
+            $_POST['channel'] ?? '',
+            $_POST['taxType'] ?? '',
+            $_POST['fullName'] ?? '',
+            $_POST['customerCode'] ?? '',
+            $_POST['phone'] ?? '',
+            $_POST['email'] ?? '',
+            $_POST['address'] ?? '',
+            $_POST['receiverName'] ?? '',
+            $_POST['receiverPhone'] ?? '',
+            $_POST['receiverEmail'] ?? '',
+            $_POST['receiverAddress'] ?? '',
+            $_POST['note'] ?? '',
+            $deliveryDate,
+            $_POST['trackingNo'] ?? '',
+            $_POST['deliveryType'] ?? '',
+            $_POST['totalDiscount'] ?? 0,
+            $_POST['deliveryFee'] ?? 0,
+            $_POST['final_total_price'] ?? 0
         ]);
-    
+
         $order_id = $pdo->lastInsertId(); // เก็บ order_id ที่สร้างใหม่ไว้ใช้ต่อ
+
+
+        $delivery_address = json_decode($_POST['deliveryAddress'] ?? '[]', true);
+
+        if ($delivery_address) {
+            $stmtInsertAddress = $pdo->prepare("INSERT INTO so_delivery_address (
+        customer_code, customer_id, address_line1, address_line2, address_line3, phone, zone_code, order_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+
+            $stmtInsertAddress->execute([
+                $_POST['customerCode'] ?? '',
+                $delivery_address['DC_id'] ?? '',
+                $delivery_address['DC_add1'] ?? '',
+                $delivery_address['DC_add2'] ?? '',
+                $delivery_address['DC_add3'] ?? '',
+                $delivery_address['DC_tel'] ?? '',
+                $delivery_address['DC_zone'] ?? 'ไม่มีข้อมูล', // zone_code ยังไม่มีส่งมาก็ใส่ค่า default ไปก่อน
+                $order_id
+            ]);
+        } else {
+            $response['warning'] = 'ไม่มีข้อมูลที่อยู่สำหรับจัดส่ง';
+        }
+
+        /// insert table ที่อยู่จัดส่ง so_delivery_address
+
+        // รับค่าที่อยู่จาก $_POST หรือ JSON (แล้วแต่ที่ frontend ส่งมา)
+        // $delivery_address = json_decode($_POST['deliveryAddress'] ?? '[]', true);
+
+        // if ($delivery_address) {
+        //     $stmtInsertAddress = $pdo->prepare("INSERT INTO so_delivery_address (
+        //         customer_code, customer_id, address_line1, address_line2, address_line3, phone, zone_code, order_id
+        //     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+
+        //     $stmtInsertAddress->execute([
+        //         $delivery_address['DC_code'] ?? '',
+        //         $delivery_address['DC_id'] ?? '',
+        //         $delivery_address['DC_add1'] ?? '',
+        //         $delivery_address['DC_add2'] ?? '',
+        //         $delivery_address['DC_add3'] ?? '',
+        //         $delivery_address['DC_tel'] ?? '',
+        //         $delivery_address['DC_zone'] ?? 'ไม่มีข้อมูล',
+        //         $order_id
+        //     ]);
+        // } else {
+        //     // ถ้าไม่มี address ส่งมา
+        //     $response['warning'] = 'ไม่มีข้อมูลที่อยู่สำหรับจัดส่ง';
+        // }
+
+
+        /////////////////////////////////// xx xx//////////////////////////////////
+        // $stmtCheckaddress = $pdo->prepare("SELECT id FROM so_delivery_address WHERE order_id = ?");
+        // // $stmtCheck->execute([$order_id, $product['pro_id']]);
+        // $stmtCheckaddress->execute([
+        //     $order_id,
+        // ]);
+
+        // $existing = $stmtCheckaddress->fetch(PDO::FETCH_ASSOC);
+
+        // if($existing){
+        //     $stmtInsertIdAddress = $pdo->prepare("UPDATE so_delivery_address SET order_id = ? WHERE id = ?");
+
+        //     $stmtInsertIdAddress->execute([
+        //         $order_id,
+        //         $existing['id']
+        //     ]);
+        // }else{
+        //     $response['success'] = false;
+        //     $response['message'] = "อัปเดตรายการไม่สำเร็จ โปรดกรอกข้อมูลที่อยู่ก่อนทำการ อัปเดท";
+        //     return;
+        // } 
+
     } else {
         $order_id = $order['id'];
-    
+
         // ✅ ทำการอัปเดตคำสั่งขายเดิม
         $stmt = $pdo->prepare("UPDATE sale_order SET 
             list_code = ?, sell_date = ?, reference = ?, channel = ?, tax_type = ?, 
@@ -182,65 +268,90 @@ try {
             final_total_price = ? 
             WHERE id = ?");
         $stmt->execute([
-            $_POST['listCode'] ?? '', $sellDate, $_POST['reference'] ?? '', $_POST['channel'] ?? '',
-            $_POST['taxType'] ?? '', $_POST['fullName'] ?? '', $_POST['customerCode'] ?? '',
-            $_POST['phone'] ?? '', $_POST['email'] ?? '', $_POST['address'] ?? '',
-            $_POST['receiverName'] ?? '', $_POST['receiverPhone'] ?? '', $_POST['receiverEmail'] ?? '',
-            $_POST['receiverAddress'] ?? '', $_POST['note'] ?? '', $deliveryDate,
-            $_POST['trackingNo'] ?? '', $_POST['deliveryType'] ?? '',
-            $_POST['totalDiscount'] ?? 0, $_POST['deliveryFee'] ?? 0,
-            $_POST['final_total_price'] ?? 0, $order_id
+            $_POST['listCode'] ?? '',
+            $sellDate,
+            $_POST['reference'] ?? '',
+            $_POST['channel'] ?? '',
+            $_POST['taxType'] ?? '',
+            $_POST['fullName'] ?? '',
+            $_POST['customerCode'] ?? '',
+            $_POST['phone'] ?? '',
+            $_POST['email'] ?? '',
+            $_POST['address'] ?? '',
+            $_POST['receiverName'] ?? '',
+            $_POST['receiverPhone'] ?? '',
+            $_POST['receiverEmail'] ?? '',
+            $_POST['receiverAddress'] ?? '',
+            $_POST['note'] ?? '',
+            $deliveryDate,
+            $_POST['trackingNo'] ?? '',
+            $_POST['deliveryType'] ?? '',
+            $_POST['totalDiscount'] ?? 0,
+            $_POST['deliveryFee'] ?? 0,
+            $_POST['final_total_price'] ?? 0,
+            $order_id
         ]);
     }
 
-    
+
     // if (!$order) throw new Exception("ไม่พบคำสั่งซื้อในระบบ");
     // $order_id = $order['id'];
-   
+
 
     // อัปเดต sale_order
-    $stmt = $pdo->prepare("UPDATE sale_order SET 
-        list_code = ?, sell_date = ?, reference = ?, channel = ?, tax_type = ?, 
-        full_name = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
-        receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, 
-        delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
-        final_total_price = ? 
-        WHERE id = ?");
-    $stmt->execute([
-        $_POST['listCode'] ?? '',
-        $sellDate,
-        $_POST['reference'] ?? '',
-        $_POST['channel'] ?? '',
-        $_POST['taxType'] ?? '',
-        $_POST['fullName'] ?? '',
-        $_POST['customerCode'] ?? '',
-        $_POST['phone'] ?? '',
-        $_POST['email'] ?? '',
-        $_POST['address'] ?? '',
-        $_POST['receiverName'] ?? '',
-        $_POST['receiverPhone'] ?? '',
-        $_POST['receiverEmail'] ?? '',
-        $_POST['receiverAddress'] ?? '',
-        $_POST['note'] ?? '',
-        $deliveryDate,
-        $_POST['trackingNo'] ?? '',
-        $_POST['deliveryType'] ?? '',
-        $_POST['totalDiscount'] ?? 0,
-        $_POST['deliveryFee'] ?? 0,
-        $_POST['final_total_price'] ?? 0,
-        $order_id
-    ]);
+    // $stmt = $pdo->prepare("UPDATE sale_order SET 
+    //     list_code = ?, sell_date = ?, reference = ?, channel = ?, tax_type = ?, 
+    //     full_name = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
+    //     receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, 
+    //     delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
+    //     final_total_price = ? 
+    //     WHERE id = ?");
+    // $stmt->execute([
+    //     $_POST['listCode'] ?? '',
+    //     $sellDate,
+    //     $_POST['reference'] ?? '',
+    //     $_POST['channel'] ?? '',
+    //     $_POST['taxType'] ?? '',
+    //     $_POST['fullName'] ?? '',
+    //     $_POST['customerCode'] ?? '',
+    //     $_POST['phone'] ?? '',
+    //     $_POST['email'] ?? '',
+    //     $_POST['address'] ?? '',
+    //     $_POST['receiverName'] ?? '',
+    //     $_POST['receiverPhone'] ?? '',
+    //     $_POST['receiverEmail'] ?? '',
+    //     $_POST['receiverAddress'] ?? '',
+    //     $_POST['note'] ?? '',
+    //     $deliveryDate,
+    //     $_POST['trackingNo'] ?? '',
+    //     $_POST['deliveryType'] ?? '',
+    //     $_POST['totalDiscount'] ?? 0,
+    //     $_POST['deliveryFee'] ?? 0,
+    //     $_POST['final_total_price'] ?? 0,
+    //     $order_id
+    // ]);
 
     // อัปเดตหรือเพิ่มสินค้า
     $products = json_decode($_POST['productList'] ?? '[]', true);
     foreach ($products as $product) {
-        $stmtCheck = $pdo->prepare("SELECT id FROM sale_order_items WHERE order_id = ? AND pro_id = ? AND pro_activity_id = ?");
-        // $stmtCheck->execute([$order_id, $product['pro_id']]);
+        // $stmtCheck = $pdo->prepare("SELECT id FROM sale_order_items WHERE order_id = ? AND pro_id = ? AND pro_activity_id = ?");
+        // // $stmtCheck->execute([$order_id, $product['pro_id']]);
+        // $stmtCheck->execute([
+        //     $order_id,
+        //     $product['pro_id'],
+        //     $product['pro_activity_id'] ?? null
+        // ]);
+        $stmtCheck = $pdo->prepare("SELECT id FROM sale_order_items 
+    WHERE order_id = ? AND pro_id = ? AND pro_activity_id = ? AND unit_price = ? AND total_price = ?");
         $stmtCheck->execute([
             $order_id,
             $product['pro_id'],
-            $product['pro_activity_id'] ?? null
+            $product['pro_activity_id'] ?? null,
+            $product['pro_unit_price'] ?? '',
+            // $product['pro_sn'] ?? '',
+            $product['pro_total_price'] ?? 0
         ]);
+
         $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
         if ($existing) {
@@ -256,7 +367,8 @@ try {
                 $product['pro_discount'] ?? 0,
                 $product['pro_total_price'] ?? 0,
                 $product['pro_images'] ?? '',
-                $product['unit'] ?? '',
+                $product['pro_units'] ?? '',
+                // $product['unit'] ?? '',
                 $product['pro_activity_id'] ?? null,
                 $existing['id']
             ]);
@@ -274,9 +386,27 @@ try {
                 $product['pro_discount'] ?? 0,
                 $product['pro_total_price'] ?? 0,
                 $product['pro_images'] ?? '',
-                $product['unit'] ?? '',
+                $product['pro_units'] ?? '',
+                // $product['unit'] ?? '',
                 $product['pro_activity_id'] ?? null
             ]);
+
+            $stmtInsert2 = [];
+
+            $stmtInsert2 = [
+                $order_id,
+                $product['pro_id'] ?? 0,
+                $product['pro_erp_title'] ?? '',
+                $product['pro_sn'] ?? '',
+                $product['pro_quantity'] ?? 0,
+                $product['pro_unit_price'] ?? 0,
+                $product['pro_discount'] ?? 0,
+                $product['pro_total_price'] ?? 0,
+                $product['pro_images'] ?? '',
+                $product['pro_units'] ?? '',
+                // $product['unit'] ?? '',
+                $product['pro_activity_id'] ?? null
+            ];
         }
     }
 
@@ -337,7 +467,7 @@ try {
     $response['success'] = true;
     $response['message'] = "อัปเดตรายการเรียบร้อยแล้ว";
     $response['newDocumentNo'] = $documentNo;
-
+    $response['stmtInsert2'] = $stmtInsert2;
 } catch (Exception $e) {
     $response['success'] = false;
     $response['message'] = "เกิดข้อผิดพลาด: " . $e->getMessage();

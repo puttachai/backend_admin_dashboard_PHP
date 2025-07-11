@@ -47,6 +47,8 @@ try {
     $response['message'] = 'บันทึกข้อมูลที่อยู่สำเร็จ';
     $response['id'] = $pdo->lastInsertId();
 
+    
+
 } catch (Exception $e) {
     $response['success'] = false;
     $response['message'] = 'เกิดข้อผิดพลาด: ' . $e->getMessage();

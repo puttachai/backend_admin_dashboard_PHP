@@ -117,6 +117,8 @@
 
     try {
         $documentNo = $_GET['documentNo'] ?? '';
+        $customerCode = $_GET['customer_code'] ?? '';
+
         if (empty($documentNo)) {
             throw new Exception("ไม่พบ documentNo");
         }
@@ -150,6 +152,13 @@
         $stmtGifts->execute([$orderId]);
         $gifts = $stmtGifts->fetchAll(PDO::FETCH_ASSOC);
 
+        // 5. ดึงข้อมูลที่อยู่
+        // $stmtAddress = $pdo->prepare("SELECT * FROM so_delivery_address WHERE order_id = ? AND document_no = ?");
+        // $stmtAddress->execute([$orderId, $documentNo]);
+        // // $address = $stmtAddress->fetchAll(PDO::FETCH_ASSOC);
+        // $address = $stmtAddress->fetch(PDO::FETCH_ASSOC);
+
+
         // รวมข้อมูลเข้า productList
         $productList = [];
 
@@ -176,7 +185,27 @@
             ];
         }
 
-            // foreach ($items as $item) {
+        $response['success'] = true;
+        $response['data'] = [
+            'order' => $order,
+            'productList' => $productList,
+            // 'deliveryAddress' => $address // เพิ่มข้อมูลที่อยู่ที่ดึงมา
+        ];
+    } catch (Exception $e) {
+        $response['success'] = false;
+        $response['message'] = "เกิดข้อผิดพลาด: " . $e->getMessage();
+    }
+
+    echo json_encode($response);
+
+
+
+
+
+
+
+
+         // foreach ($items as $item) {
             //     // แปะข้อมูลเพิ่ม
             //     $productList[] = [
             //         'activity_id' => $item['pro_activity_id'], // หรือจะใช้ activity_id ที่ได้จาก promotions ก็ได้
@@ -196,18 +225,11 @@
         // }
 
         // ✅ รวมข้อมูลทั้งหมด
-        $response['success'] = true;
-        $response['data'] = [
-            'order' => $order,
-            'productList' => $productList
-        ];
-    } catch (Exception $e) {
-        $response['success'] = false;
-        $response['message'] = "เกิดข้อผิดพลาด: " . $e->getMessage();
-    }
 
-    echo json_encode($response);
 
+
+
+    
 
 // header("Access-Control-Allow-Origin: *");
 // header("Access-Control-Allow-Headers: Content-Type");

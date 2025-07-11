@@ -167,7 +167,6 @@ function convertDateToMySQLFormat($date)
 }
 
 
-
 try {
     $documentNo = $_POST['documentNo'] ?? '';
     if (empty($documentNo)) throw new Exception("ไม่พบ documentNo");
@@ -183,6 +182,7 @@ try {
         exit;
     }
 
+
     $sellDate = convertDateToMySQLFormat($_POST['sellDate'] ?? '');
     $deliveryDate = convertDateToMySQLFormat($_POST['deliveryDate'] ?? '');
 
@@ -193,13 +193,93 @@ try {
     if (!$order) throw new Exception("ไม่พบคำสั่งซื้อ");
     $order_id = $order['id'];
 
+    // ✅ เพิ่มโค้ดสำหรับ UPDATE/INSERT delivery address ที่นี่
+    $delivery_address = json_decode($_POST['deliveryAddress'] ?? '[]', true);
+
+    if ($delivery_address) {
+        // ตรวจสอบว่ามี address ของ order_id นี้อยู่หรือยัง
+        $stmtCheck = $pdo->prepare("SELECT id FROM so_delivery_address WHERE order_id = ?");
+        $stmtCheck->execute([$order_id]);
+        $existingAddress = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+        if ($existingAddress) {
+            // หากมีข้อมูลแล้ว → ทำการ UPDATE
+            $stmtUpdate = $pdo->prepare("
+            UPDATE so_delivery_address
+            SET
+                customer_code = ?,
+                customer_id = ?,
+                address_line1 = ?,
+                address_line2 = ?,
+                address_line3 = ?,
+                phone = ?,
+                zone_code = ?
+            WHERE order_id = ?
+        ");
+            $stmtUpdate->execute([
+                $_POST['customerCode'] ?? '',
+                $delivery_address['DC_id'] ?? '',
+                $delivery_address['DC_add1'] ?? '',
+                $delivery_address['DC_add2'] ?? '',
+                $delivery_address['DC_add3'] ?? '',
+                $delivery_address['DC_tel'] ?? '',
+                $delivery_address['DC_zone'] ?? 'ไม่มีข้อมูล',
+                $order_id
+            ]);
+        } else {
+            // หากไม่มีข้อมูล → ทำการ INSERT
+            $stmtInsertAddress = $pdo->prepare("INSERT INTO so_delivery_address (
+            customer_code, customer_id, address_line1, address_line2, address_line3, phone, zone_code, order_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+
+            $stmtInsertAddress->execute([
+                $_POST['customerCode'] ?? '',
+                $delivery_address['DC_id'] ?? '',
+                $delivery_address['DC_add1'] ?? '',
+                $delivery_address['DC_add2'] ?? '',
+                $delivery_address['DC_add3'] ?? '',
+                $delivery_address['DC_tel'] ?? '',
+                $delivery_address['DC_zone'] ?? 'ไม่มีข้อมูล',
+                $order_id
+            ]);
+        }
+    } else {
+        $response['warning'] = 'ไม่มีข้อมูลที่อยู่สำหรับจัดส่ง';
+    }
+
+    // 👇 STEP: เรียก API เพื่ออัปเดตเอกสาร (เหมือนโค้ดเก่า)
+    $prefix = substr($documentNo, 0, strrpos($documentNo, '-'));
+
+    $updateDocResponse = file_get_contents("http://localhost/api_admin_dashboard/backend/api/update_documentrunning.php", false, stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => 'Content-Type: application/json',
+            'content' => json_encode(['prefix' => $prefix])
+        ]
+    ]));
+
+    $updateDocData = json_decode($updateDocResponse, true);
+    if (!$updateDocData['success']) {
+        throw new Exception($updateDocData['message']);
+    }
+
+    $newDocumentNo = $updateDocData['doc_number'];
+
+    // 👇 STEP: อัปเดต documentNo ใหม่ให้ตาราง sale_order
+    $stmtUpdateDoc = $pdo->prepare("UPDATE sale_order SET document_no = ? WHERE id = ?");
+    $stmtUpdateDoc->execute([$newDocumentNo, $order_id]);
+
+    // อย่าลืมใช้ตัวแปรนี้แทน documentNo เดิมด้านล่าง
+    // $documentNo = $newDocumentNo;
+
+
     // อัปเดตคำสั่งขายหลัก
     $stmt = $pdo->prepare("UPDATE sale_order SET 
         list_code = ?, sell_date = ?, reference = ?, channel = ?, tax_type = ?, 
         full_name = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
         receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, 
         delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
-        final_total_price = ? 
+        final_total_price = ?
         WHERE id = ?");
     $stmt->execute([
         $_POST['listCode'] ?? '',
@@ -230,16 +310,32 @@ try {
     $products = json_decode($_POST['productList'] ?? '[]', true);
     $newItemIds = [];
     foreach ($products as $product) {
-        $stmt = $pdo->prepare("SELECT id FROM sale_order_items WHERE order_id = ? AND pro_id = ?");
-        $stmt->execute([$order_id, $product['pro_id']]);
-        $exist = $stmt->fetch(PDO::FETCH_ASSOC);
+        // $stmtCheck = $pdo->prepare("SELECT id FROM sale_order_items WHERE order_id = ? AND pro_id = ? AND pro_activity_id = ?");
+        // // $stmtCheck->execute([$order_id, $product['pro_id']]);
+        // $stmtCheck->execute([
+        //     $order_id,
+        //     $product['pro_id'],
+        //     $product['pro_activity_id'] ?? null
+        // ]);
+        $stmtCheck = $pdo->prepare("SELECT id FROM sale_order_items 
+    WHERE order_id = ? AND pro_id = ? AND pro_activity_id = ? AND unit_price = ? AND total_price = ?");
+        $stmtCheck->execute([
+            $order_id,
+            $product['pro_id'],
+            $product['pro_activity_id'] ?? 0,
+            $product['pro_unit_price'] ?? '',
+            // $product['pro_sn'] ?? '',
+            $product['pro_total_price'] ?? 0
+        ]);
 
-        if ($exist) {
-            $stmt = $pdo->prepare("UPDATE sale_order_items SET 
+        $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
                 pro_name = ?, sn = ?, qty = ?, unit_price = ?, discount = ?, 
-                total_price = ?, pro_images = ?, unit = ?, pro_activity_id = ?
+                total_price = ?, pro_images = ?, unit = ?, pro_activity_id = ? 
                 WHERE id = ?");
-            $stmt->execute([
+            $stmtUpdate->execute([
                 $product['pro_erp_title'] ?? '',
                 $product['pro_sn'] ?? '',
                 $product['pro_quantity'] ?? 0,
@@ -247,32 +343,99 @@ try {
                 $product['pro_discount'] ?? 0,
                 $product['pro_total_price'] ?? 0,
                 $product['pro_images'] ?? '',
-                $product['unit'] ?? '',
+                $product['pro_units'] ?? '',
+                // $product['unit'] ?? '',
                 $product['pro_activity_id'] ?? null,
-                $exist['id']
+                $existing['id']
+                
             ]);
-            $newItemIds[] = $exist['id'];
+            $newItemIds[] = $existing['id'];
         } else {
-            $stmt = $pdo->prepare("INSERT INTO sale_order_items (
-                order_id, pro_id, pro_name, sn, qty, unit_price, discount, 
-                total_price, pro_images, unit, pro_activity_id
+            $stmtInsert = $pdo->prepare("INSERT INTO sale_order_items (
+                order_id, pro_id, pro_name, sn, qty, unit_price, discount, total_price, pro_images, unit, pro_activity_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([
+            $stmtInsert->execute([
                 $order_id,
-                $product['pro_id'],
-                $product['pro_erp_title'],
-                $product['pro_sn'],
-                $product['pro_quantity'],
-                $product['pro_unit_price'],
-                $product['pro_discount'],
-                $product['pro_total_price'],
-                $product['pro_images'],
-                $product['unit'],
+                $product['pro_id'] ?? 0,
+                $product['pro_erp_title'] ?? '',
+                $product['pro_sn'] ?? '',
+                $product['pro_quantity'] ?? 0,
+                $product['pro_unit_price'] ?? 0,
+                $product['pro_discount'] ?? 0,
+                $product['pro_total_price'] ?? 0,
+                $product['pro_images'] ?? '',
+                $product['pro_units'] ?? '',
+                // $product['unit'] ?? '',
                 $product['pro_activity_id'] ?? null
             ]);
-            $newItemIds[] = $pdo->lastInsertId();
+
+            $newItemIds[] = $pdo->lastInsertId(); // ✅ เก็บ id ที่ insert
+
+            $stmtInsert2 = [];
+
+            $stmtInsert2 = [
+                $order_id,
+                $product['pro_id'] ?? 0,
+                $product['pro_erp_title'] ?? '',
+                $product['pro_sn'] ?? '',
+                $product['pro_quantity'] ?? 0,
+                $product['pro_unit_price'] ?? 0,
+                $product['pro_discount'] ?? 0,
+                $product['pro_total_price'] ?? 0,
+                $product['pro_images'] ?? '',
+                $product['pro_units'] ?? '',
+                // $product['unit'] ?? '',
+                $product['pro_activity_id'] ?? null
+            ];
         }
     }
+    
+    // $products = json_decode($_POST['productList'] ?? '[]', true);
+    // $newItemIds = [];
+    // foreach ($products as $product) {
+    //     $stmt = $pdo->prepare("SELECT id FROM sale_order_items WHERE order_id = ? AND pro_id = ?");
+    //     $stmt->execute([$order_id, $product['pro_id']]);
+    //     $exist = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    //     if ($exist) {
+    //         $stmt = $pdo->prepare("UPDATE sale_order_items SET 
+    //             pro_name = ?, sn = ?, qty = ?, unit_price = ?, discount = ?, 
+    //             total_price = ?, pro_images = ?, unit = ?, pro_activity_id = ?
+    //             WHERE id = ?");
+    //         $stmt->execute([
+    //             $product['pro_erp_title'] ?? '',
+    //             $product['pro_sn'] ?? '',
+    //             $product['pro_quantity'] ?? 0,
+    //             $product['pro_unit_price'] ?? 0,
+    //             $product['pro_discount'] ?? 0,
+    //             $product['pro_total_price'] ?? 0,
+    //             $product['pro_images'] ?? '',
+    //             $product['pro_units'] ?? '',
+    //             $product['pro_activity_id'] ?? '', ////////////////////////////////
+    //             $exist['id']
+    //         ]);
+    //         $newItemIds[] = $exist['id'];
+    //     } else {
+    //         $stmt = $pdo->prepare("INSERT INTO sale_order_items (
+    //             order_id, pro_id, pro_name, sn, qty, unit_price, discount, 
+    //             total_price, pro_images, unit, pro_activity_id
+    //         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    //         $stmt->execute([
+    //             $order_id,
+    //             $product['pro_id'],
+    //             $product['pro_erp_title'],
+    //             $product['pro_sn'],
+    //             $product['pro_quantity'],
+    //             $product['pro_unit_price'],
+    //             $product['pro_discount'],
+    //             $product['pro_total_price'],
+    //             $product['pro_images'],
+    //             $product['pro_units'] || '',
+    //             $product['pro_activity_id'] ?? null
+    //         ]);
+    //         $newItemIds[] = $pdo->lastInsertId();
+    //     }
+    // }
 
     // ลบ item ที่ไม่มีในรายการใหม่
     if (!empty($newItemIds)) {
@@ -354,7 +517,8 @@ try {
 
     $response['success'] = true;
     $response['message'] = "อัปเดตรายการเรียบร้อยแล้ว";
-    $response['newDocumentNo'] = $documentNo;
+    $response['newDocumentNo'] = $newDocumentNo;
+    // $response['newDocumentNo'] = $documentNo;
 } catch (Exception $e) {
     $response['success'] = false;
     $response['message'] = "เกิดข้อผิดพลาด: " . $e->getMessage();
