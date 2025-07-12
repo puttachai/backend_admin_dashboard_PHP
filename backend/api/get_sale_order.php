@@ -170,6 +170,7 @@
             $matchedGifts = array_filter($gifts, fn($g) => $g['pro_activity_id'] == $activityId);
         
             $productList[] = [
+                'id' => $item['id'],
                 'pro_id' => $item['pro_id'],
                 'pro_name' => $item['pro_name'],
                 'sn' => $item['sn'],

@@ -309,33 +309,18 @@ try {
     // =============== UPDATE SALE_ORDER_ITEMS ===============
     $products = json_decode($_POST['productList'] ?? '[]', true);
     $newItemIds = [];
+
     foreach ($products as $product) {
-        // $stmtCheck = $pdo->prepare("SELECT id FROM sale_order_items WHERE order_id = ? AND pro_id = ? AND pro_activity_id = ?");
-        // // $stmtCheck->execute([$order_id, $product['pro_id']]);
-        // $stmtCheck->execute([
-        //     $order_id,
-        //     $product['pro_id'],
-        //     $product['pro_activity_id'] ?? null
-        // ]);
-        $stmtCheck = $pdo->prepare("SELECT id FROM sale_order_items 
-    WHERE order_id = ? AND pro_id = ? AND pro_activity_id = ? AND unit_price = ? AND total_price = ?");
-        $stmtCheck->execute([
-            $order_id,
-            $product['pro_id'],
-            $product['pro_activity_id'] ?? 0,
-            $product['pro_unit_price'] ?? '',
-            // $product['pro_sn'] ?? '',
-            $product['pro_total_price'] ?? 0
-        ]);
-
-        $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
-
-        if ($existing) {
+        $itemId = $product['item_id'] ?? 0;
+    
+        if ($itemId > 0) { //452
+            // ✏️ UPDATE รายการเดิม
             $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
-                pro_name = ?, sn = ?, qty = ?, unit_price = ?, discount = ?, 
-                total_price = ?, pro_images = ?, unit = ?, pro_activity_id = ? 
-                WHERE id = ?");
+                pro_id = ?, pro_name = ?, sn = ?, qty = ?, unit_price = ?, discount = ?, 
+                total_price = ?, pro_images = ?, unit = ?, pro_activity_id = ?
+                WHERE id = ? AND order_id = ?");
             $stmtUpdate->execute([
+                $product['pro_id'] ?? 0,
                 $product['pro_erp_title'] ?? '',
                 $product['pro_sn'] ?? '',
                 $product['pro_quantity'] ?? 0,
@@ -344,13 +329,13 @@ try {
                 $product['pro_total_price'] ?? 0,
                 $product['pro_images'] ?? '',
                 $product['pro_units'] ?? '',
-                // $product['unit'] ?? '',
-                $product['pro_activity_id'] ?? null,
-                $existing['id']
-                
+                $product['pro_activity_id'] ?? 0,
+                $itemId,
+                $order_id
             ]);
-            $newItemIds[] = $existing['id'];
+            $newItemIds[] = $itemId;
         } else {
+            // 🆕 INSERT รายการใหม่
             $stmtInsert = $pdo->prepare("INSERT INTO sale_order_items (
                 order_id, pro_id, pro_name, sn, qty, unit_price, discount, total_price, pro_images, unit, pro_activity_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -365,44 +350,24 @@ try {
                 $product['pro_total_price'] ?? 0,
                 $product['pro_images'] ?? '',
                 $product['pro_units'] ?? '',
-                // $product['unit'] ?? '',
-                $product['pro_activity_id'] ?? null
+                $product['pro_activity_id'] ?? 0
             ]);
-
-            $newItemIds[] = $pdo->lastInsertId(); // ✅ เก็บ id ที่ insert
-
-            $stmtInsert2 = [];
-
-            $stmtInsert2 = [
-                $order_id,
-                $product['pro_id'] ?? 0,
-                $product['pro_erp_title'] ?? '',
-                $product['pro_sn'] ?? '',
-                $product['pro_quantity'] ?? 0,
-                $product['pro_unit_price'] ?? 0,
-                $product['pro_discount'] ?? 0,
-                $product['pro_total_price'] ?? 0,
-                $product['pro_images'] ?? '',
-                $product['pro_units'] ?? '',
-                // $product['unit'] ?? '',
-                $product['pro_activity_id'] ?? null
-            ];
+            $newItemIds[] = $pdo->lastInsertId();
         }
     }
     
-    // $products = json_decode($_POST['productList'] ?? '[]', true);
-    // $newItemIds = [];
+///////////////////// สำรองพอใช้ได้ /////////////////////////
     // foreach ($products as $product) {
-    //     $stmt = $pdo->prepare("SELECT id FROM sale_order_items WHERE order_id = ? AND pro_id = ?");
-    //     $stmt->execute([$order_id, $product['pro_id']]);
-    //     $exist = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    //     if ($exist) {
-    //         $stmt = $pdo->prepare("UPDATE sale_order_items SET 
-    //             pro_name = ?, sn = ?, qty = ?, unit_price = ?, discount = ?, 
+    //     $id = $product['item_id'] ?? null;
+    
+    //     if ($id) {
+    //         // ✅ มี id แสดงว่าเป็นรายการเดิม → UPDATE
+    //         $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
+    //             pro_id = ?, pro_name = ?, sn = ?, qty = ?, unit_price = ?, discount = ?, 
     //             total_price = ?, pro_images = ?, unit = ?, pro_activity_id = ?
-    //             WHERE id = ?");
-    //         $stmt->execute([
+    //             WHERE id = ? AND order_id = ?");
+    //         $stmtUpdate->execute([
+    //             $product['pro_id'] ?? 0,
     //             $product['pro_erp_title'] ?? '',
     //             $product['pro_sn'] ?? '',
     //             $product['pro_quantity'] ?? 0,
@@ -411,32 +376,115 @@ try {
     //             $product['pro_total_price'] ?? 0,
     //             $product['pro_images'] ?? '',
     //             $product['pro_units'] ?? '',
-    //             $product['pro_activity_id'] ?? '', ////////////////////////////////
-    //             $exist['id']
+    //             $product['pro_activity_id'] ?? 0,
+    //             $id,
+    //             $order_id
     //         ]);
-    //         $newItemIds[] = $exist['id'];
+    //         $newItemIds[] = $id;
     //     } else {
-    //         $stmt = $pdo->prepare("INSERT INTO sale_order_items (
-    //             order_id, pro_id, pro_name, sn, qty, unit_price, discount, 
-    //             total_price, pro_images, unit, pro_activity_id
+    //         // ✅ ไม่มี id → INSERT
+    //         $stmtInsert = $pdo->prepare("INSERT INTO sale_order_items (
+    //             order_id, pro_id, pro_name, sn, qty, unit_price, discount, total_price, pro_images, unit, pro_activity_id
     //         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    //         $stmt->execute([
+    //         $stmtInsert->execute([
     //             $order_id,
-    //             $product['pro_id'],
-    //             $product['pro_erp_title'],
-    //             $product['pro_sn'],
-    //             $product['pro_quantity'],
-    //             $product['pro_unit_price'],
-    //             $product['pro_discount'],
-    //             $product['pro_total_price'],
-    //             $product['pro_images'],
-    //             $product['pro_units'] || '',
-    //             $product['pro_activity_id'] ?? null
+    //             $product['pro_id'] ?? 0,
+    //             $product['pro_erp_title'] ?? '',
+    //             $product['pro_sn'] ?? '',
+    //             $product['pro_quantity'] ?? 0,
+    //             $product['pro_unit_price'] ?? 0,
+    //             $product['pro_discount'] ?? 0,
+    //             $product['pro_total_price'] ?? 0,
+    //             $product['pro_images'] ?? '',
+    //             $product['pro_units'] ?? '',
+    //             $product['pro_activity_id'] ?? 0
     //         ]);
     //         $newItemIds[] = $pdo->lastInsertId();
     //     }
     // }
+    
+///////////////////// สำรองไม่แนะนำให้ใช้ /////////////////////////
+    // foreach ($products as $product) {
+    //     // $stmtCheck = $pdo->prepare("SELECT id FROM sale_order_items WHERE order_id = ? AND pro_id = ? AND pro_activity_id = ?");
+    //     // // $stmtCheck->execute([$order_id, $product['pro_id']]);
+    //     // $stmtCheck->execute([
+    //     //     $order_id,
+    //     //     $product['pro_id'],
+    //     //     $product['pro_activity_id'] ?? null
+    //     // ]);
+    //     $stmtCheck = $pdo->prepare("SELECT id FROM sale_order_items 
+    // WHERE order_id = ? AND pro_id = ? AND pro_activity_id = ? AND unit_price = ? AND total_price = ?");
+    //     $stmtCheck->execute([
+    //         $order_id,
+    //         $product['pro_id'],
+    //         $product['pro_activity_id'] ?? 0,
+    //         $product['pro_unit_price'] ?? '',
+    //         // $product['pro_sn'] ?? '',
+    //         $product['pro_total_price'] ?? 0
+    //     ]);
 
+    //     $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+    //     if ($existing) {
+    //         $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
+    //             pro_name = ?, sn = ?, qty = ?, unit_price = ?, discount = ?, 
+    //             total_price = ?, pro_images = ?, unit = ?, pro_activity_id = ? 
+    //             WHERE id = ?");
+    //         $stmtUpdate->execute([
+    //             $product['pro_erp_title'] ?? '',
+    //             $product['pro_sn'] ?? '',
+    //             $product['pro_quantity'] ?? 0,
+    //             $product['pro_unit_price'] ?? 0,
+    //             $product['pro_discount'] ?? 0,
+    //             $product['pro_total_price'] ?? 0,
+    //             $product['pro_images'] ?? '',
+    //             $product['pro_units'] ?? '',
+    //             // $product['unit'] ?? '',
+    //             $product['pro_activity_id'] ?? null,
+    //             $existing['id']
+                
+    //         ]);
+    //         $newItemIds[] = $existing['id'];
+    //     } else {
+    //         $stmtInsert = $pdo->prepare("INSERT INTO sale_order_items (
+    //             order_id, pro_id, pro_name, sn, qty, unit_price, discount, total_price, pro_images, unit, pro_activity_id
+    //         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    //         $stmtInsert->execute([
+    //             $order_id,
+    //             $product['pro_id'] ?? 0,
+    //             $product['pro_erp_title'] ?? '',
+    //             $product['pro_sn'] ?? '',
+    //             $product['pro_quantity'] ?? 0,
+    //             $product['pro_unit_price'] ?? 0,
+    //             $product['pro_discount'] ?? 0,
+    //             $product['pro_total_price'] ?? 0,
+    //             $product['pro_images'] ?? '',
+    //             $product['pro_units'] ?? '',
+    //             // $product['unit'] ?? '',
+    //             $product['pro_activity_id'] ?? 0
+    //         ]);
+
+    //         $newItemIds[] = $pdo->lastInsertId(); // ✅ เก็บ id ที่ insert
+
+    //         $stmtInsert2 = [];
+
+    //         $stmtInsert2 = [
+    //             $order_id,
+    //             $product['pro_id'] ?? 0,
+    //             $product['pro_erp_title'] ?? '',
+    //             $product['pro_sn'] ?? '',
+    //             $product['pro_quantity'] ?? 0,
+    //             $product['pro_unit_price'] ?? 0,
+    //             $product['pro_discount'] ?? 0,
+    //             $product['pro_total_price'] ?? 0,
+    //             $product['pro_images'] ?? '',
+    //             $product['pro_units'] ?? '',
+    //             // $product['unit'] ?? '',
+    //             $product['pro_activity_id'] ?? 0
+    //         ];
+    //     }
+    // }
+    
     // ลบ item ที่ไม่มีในรายการใหม่
     if (!empty($newItemIds)) {
         $idsStr = implode(',', array_map('intval', $newItemIds));
@@ -526,6 +574,55 @@ try {
 
 echo json_encode($response);
 
+///////////////////////////////////////////////
+
+    // $products = json_decode($_POST['productList'] ?? '[]', true);
+    // $newItemIds = [];
+    // foreach ($products as $product) {
+    //     $stmt = $pdo->prepare("SELECT id FROM sale_order_items WHERE order_id = ? AND pro_id = ?");
+    //     $stmt->execute([$order_id, $product['pro_id']]);
+    //     $exist = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    //     if ($exist) {
+    //         $stmt = $pdo->prepare("UPDATE sale_order_items SET 
+    //             pro_name = ?, sn = ?, qty = ?, unit_price = ?, discount = ?, 
+    //             total_price = ?, pro_images = ?, unit = ?, pro_activity_id = ?
+    //             WHERE id = ?");
+    //         $stmt->execute([
+    //             $product['pro_erp_title'] ?? '',
+    //             $product['pro_sn'] ?? '',
+    //             $product['pro_quantity'] ?? 0,
+    //             $product['pro_unit_price'] ?? 0,
+    //             $product['pro_discount'] ?? 0,
+    //             $product['pro_total_price'] ?? 0,
+    //             $product['pro_images'] ?? '',
+    //             $product['pro_units'] ?? '',
+    //             $product['pro_activity_id'] ?? '', ////////////////////////////////
+    //             $exist['id']
+    //         ]);
+    //         $newItemIds[] = $exist['id'];
+    //     } else {
+    //         $stmt = $pdo->prepare("INSERT INTO sale_order_items (
+    //             order_id, pro_id, pro_name, sn, qty, unit_price, discount, 
+    //             total_price, pro_images, unit, pro_activity_id
+    //         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    //         $stmt->execute([
+    //             $order_id,
+    //             $product['pro_id'],
+    //             $product['pro_erp_title'],
+    //             $product['pro_sn'],
+    //             $product['pro_quantity'],
+    //             $product['pro_unit_price'],
+    //             $product['pro_discount'],
+    //             $product['pro_total_price'],
+    //             $product['pro_images'],
+    //             $product['pro_units'] || '',
+    //             $product['pro_activity_id'] ?? null
+    //         ]);
+    //         $newItemIds[] = $pdo->lastInsertId();
+    //     }
+    // }
+///////////////////////////////////////////////
 
 
 // header("Access-Control-Allow-Origin: *");
