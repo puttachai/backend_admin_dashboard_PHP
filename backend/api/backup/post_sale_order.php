@@ -468,6 +468,7 @@ try {
     $response['message'] = "อัปเดตรายการเรียบร้อยแล้ว";
     $response['newDocumentNo'] = $documentNo;
     $response['stmtInsert2'] = $stmtInsert2;
+    $response['order_id'] = $order_id;
 } catch (Exception $e) {
     $response['success'] = false;
     $response['message'] = "เกิดข้อผิดพลาด: " . $e->getMessage();

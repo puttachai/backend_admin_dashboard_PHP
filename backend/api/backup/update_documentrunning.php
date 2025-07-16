@@ -29,7 +29,7 @@ try {
 
     // เพิ่มค่า run_number
     $newRunNumber = $existing['run_number'] + 1;
-    $formattedRunNumber = str_pad($newRunNumber, 6, '0', STR_PAD_LEFT); // ✅ ทำให้เป็น "000002"
+    $formattedRunNumber = str_pad($newRunNumber, 5, '0', STR_PAD_LEFT); // ✅ ทำให้เป็น "000002"
 
     // อัปเดต run_number ในฐานข้อมูล
     $updateStmt = $pdo->prepare("UPDATE DocumentRunning SET run_number = :run_number, updated_at = NOW() WHERE prefix = :prefix");

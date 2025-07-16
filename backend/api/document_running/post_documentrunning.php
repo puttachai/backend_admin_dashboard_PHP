@@ -3,7 +3,8 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-require 'conndb.php'; // เชื่อมต่อ Database
+require_once(__DIR__ . '/../db/conndb.php');
+// require 'conndb.php'; // เชื่อมต่อ Database
 
 $rawData = json_decode(file_get_contents("php://input"), true);
 
@@ -38,7 +39,7 @@ try {
     if ($existing) {
         // ถ้ามี → เพิ่ม run_number +1
         $newRunNumber = $existing['run_number'] + 1;
-        $formattedRunNumber = str_pad($newRunNumber, 6, '0', STR_PAD_LEFT); // ✅ ทำให้เป็น "000001"
+        $formattedRunNumber = str_pad($newRunNumber, 5, '0', STR_PAD_LEFT); // ✅ ทำให้เป็น "000001"
 
         $updateStmt = $pdo->prepare("UPDATE DocumentRunning SET run_number = :run_number, updated_at = NOW() WHERE prefix = :prefix");
         $updateStmt->execute([
@@ -62,7 +63,7 @@ try {
         // ถ้ายังไม่มี → เพิ่มใหม่ run_number = 1
         $newRunNumber = 1;
         // $newRunNumber = $existing['run_number'] + 1;
-        $formattedRunNumber = str_pad($newRunNumber, 6, '0', STR_PAD_LEFT); // ✅ ทำให้เป็น "000001"
+        $formattedRunNumber = str_pad($newRunNumber, 5, '0', STR_PAD_LEFT); // ✅ ทำให้เป็น "000001"
 
         $insertStmt = $pdo->prepare("INSERT INTO DocumentRunning (warehouse_code, doc_type, prefix, run_number) VALUES (:warehouse_code, :doc_type, :prefix, :run_number)");
         $insertStmt->execute([

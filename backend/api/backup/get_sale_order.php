@@ -166,8 +166,8 @@
             $activityId = $item['pro_activity_id'] ?? null;
         
             // ดึงเฉพาะ promotions/gifts ที่ item_id ตรงกับ activityId
-            $matchedPromotions = array_filter($promotions, fn($p) => $p['pro_activity_id'] == $activityId);
-            $matchedGifts = array_filter($gifts, fn($g) => $g['pro_activity_id'] == $activityId);
+            $matchedPromotions = array_filter($promotions, fn($p) => $p['pro_activity_id'] == $activityId && $p['order_id'] == $orderId);
+            $matchedGifts = array_filter($gifts, fn($g) => $g['pro_activity_id'] == $activityId && $g['order_id'] == $orderId);
         
             $productList[] = [
                 'id' => $item['id'],
