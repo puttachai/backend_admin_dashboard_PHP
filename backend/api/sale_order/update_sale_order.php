@@ -251,13 +251,20 @@ try {
     // 👇 STEP: เรียก API เพื่ออัปเดตเอกสาร (เหมือนโค้ดเก่า)
     $prefix = substr($documentNo, 0, strrpos($documentNo, '-'));
 
-    $updateDocResponse = file_get_contents("http://localhost/api_admin_dashboard/backend/api/update_documentrunning.php", false, stream_context_create([
+    // file_get_contents(__DIR__ . '/../update_documentrunning.php');
+    $updateDocResponse = file_get_contents("http://localhost/api_admin_dashboard/backend/api/document_running/update_documentrunning.php", false, stream_context_create([
         'http' => [
             'method' => 'POST',
             'header' => 'Content-Type: application/json',
             'content' => json_encode(['prefix' => $prefix])
         ]
     ]));
+    
+    // หรือถ้าจะเรียก API จริงๆ ใช้ CURL แทนจะดีกว่า เช่น
+    // $ch = curl_init('http://localhost/api_admin_dashboard/backend/api/update_documentrunning.php');
+    // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    // $response = curl_exec($ch);
+    // curl_close($ch);
 
     $updateDocData = json_decode($updateDocResponse, true);
     if (!$updateDocData['success']) {
@@ -280,7 +287,8 @@ try {
         full_name = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
         receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, 
         delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
-        final_total_price = ?
+        final_total_price = ?,
+        price_before_tax = ?, tax_value = ?, price_with_tax = ?
         WHERE id = ?");
     $stmt->execute([
         $_POST['listCode'] ?? '',
@@ -304,6 +312,10 @@ try {
         $_POST['totalDiscount'] ?? 0,
         $_POST['deliveryFee'] ?? 0,
         $_POST['final_total_price'] ?? 0,
+        //
+        $_POST['price_before_tax'] ?? 0,
+        $_POST['tax_value'] ?? 0,
+        $_POST['price_with_tax'] ?? 0,
         $order_id
     ]);
 
@@ -313,7 +325,7 @@ try {
 
     foreach ($products as $product) {
         $itemId = $product['item_id'] ?? 0;
-    
+
         if ($itemId > 0) { //452
             // ✏️ UPDATE รายการเดิม
             $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
@@ -356,11 +368,11 @@ try {
             $newItemIds[] = $pdo->lastInsertId();
         }
     }
-    
-///////////////////// สำรองพอใช้ได้ /////////////////////////
+
+    ///////////////////// สำรองพอใช้ได้ /////////////////////////
     // foreach ($products as $product) {
     //     $id = $product['item_id'] ?? null;
-    
+
     //     if ($id) {
     //         // ✅ มี id แสดงว่าเป็นรายการเดิม → UPDATE
     //         $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
@@ -403,8 +415,8 @@ try {
     //         $newItemIds[] = $pdo->lastInsertId();
     //     }
     // }
-    
-///////////////////// สำรองไม่แนะนำให้ใช้ /////////////////////////
+
+    ///////////////////// สำรองไม่แนะนำให้ใช้ /////////////////////////
     // foreach ($products as $product) {
     //     // $stmtCheck = $pdo->prepare("SELECT id FROM sale_order_items WHERE order_id = ? AND pro_id = ? AND pro_activity_id = ?");
     //     // // $stmtCheck->execute([$order_id, $product['pro_id']]);
@@ -443,7 +455,7 @@ try {
     //             // $product['unit'] ?? '',
     //             $product['pro_activity_id'] ?? null,
     //             $existing['id']
-                
+
     //         ]);
     //         $newItemIds[] = $existing['id'];
     //     } else {
@@ -485,7 +497,7 @@ try {
     //         ];
     //     }
     // }
-    
+
     // ลบ item ที่ไม่มีในรายการใหม่
     if (!empty($newItemIds)) {
         $idsStr = implode(',', array_map('intval', $newItemIds));

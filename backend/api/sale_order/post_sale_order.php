@@ -157,8 +157,9 @@ try {
             full_name, customer_code, phone, email, address, 
             receiver_name, receiver_phone, receiver_email, receiver_address, note, 
             delivery_date, tracking_no, delivery_type, total_discount, delivery_fee, 
-            final_total_price
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            final_total_price,
+            price_before_tax, tax_value, price_with_tax
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $stmtInsertOrder->execute([
             $documentNo,
@@ -182,7 +183,11 @@ try {
             $_POST['deliveryType'] ?? '',
             $_POST['totalDiscount'] ?? 0,
             $_POST['deliveryFee'] ?? 0,
-            $_POST['final_total_price'] ?? 0
+            $_POST['final_total_price'] ?? 0,
+            //
+            $_POST['price_before_tax'] ?? 0,  // เพิ่มนี้
+            $_POST['tax_value'] ?? 0,         // เพิ่มนี้
+            $_POST['price_with_tax'] ?? 0     // เพิ่มนี้
         ]);
 
         $order_id = $pdo->lastInsertId(); // เก็บ order_id ที่สร้างใหม่ไว้ใช้ต่อ
@@ -266,7 +271,8 @@ try {
             full_name = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
             receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, 
             delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
-            final_total_price = ? 
+            final_total_price = ?,
+            price_before_tax = ?, tax_value = ?, price_with_tax = ? 
             WHERE id = ?");
         $stmt->execute([
             $_POST['listCode'] ?? '',
@@ -290,6 +296,11 @@ try {
             $_POST['totalDiscount'] ?? 0,
             $_POST['deliveryFee'] ?? 0,
             $_POST['final_total_price'] ?? 0,
+            $_POST['final_total_price'] ?? 0,
+            //
+            $_POST['price_before_tax'] ?? 0,  // เพิ่มนี้
+            $_POST['tax_value'] ?? 0,         // เพิ่มนี้
+            $_POST['price_with_tax'] ?? 0,    // เพิ่มนี้
             $order_id
         ]);
     }
