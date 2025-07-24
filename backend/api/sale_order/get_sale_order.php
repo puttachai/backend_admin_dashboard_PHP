@@ -118,7 +118,8 @@
 
     try {
         $documentNo = $_GET['documentNo'] ?? '';
-        $customerCode = $_GET['customer_code'] ?? '';
+        // $customerCode = $_GET['customer_code'] ?? '';
+        // $customerCode = $_GET['customer_code'] ?? '';
 
         if (empty($documentNo)) {
             throw new Exception("ไม่พบ documentNo");
@@ -153,6 +154,22 @@
         $stmtGifts->execute([$orderId]);
         $gifts = $stmtGifts->fetchAll(PDO::FETCH_ASSOC);
 
+        // 5. ดึงข้อมูลที่อยู่ (Address)
+        $stmtAddress = $pdo->prepare("
+            SELECT * 
+            FROM so_delivery_address 
+            WHERE order_id = :order_id 
+            ORDER BY id DESC 
+            LIMIT 1
+        ");
+        // AND customer_code = :customer_code
+        //  ':customer_code' => $customerCode
+        $stmtAddress->execute([
+            ':order_id' => $orderId,
+           
+        ]);
+        $address = $stmtAddress->fetch(PDO::FETCH_ASSOC);
+
         // 5. ดึงข้อมูลที่อยู่
         // $stmtAddress = $pdo->prepare("SELECT * FROM so_delivery_address WHERE order_id = ? AND document_no = ?");
         // $stmtAddress->execute([$orderId, $documentNo]);
@@ -165,11 +182,11 @@
 
         foreach ($items as $item) {
             $activityId = $item['pro_activity_id'] ?? null;
-        
+
             // ดึงเฉพาะ promotions/gifts ที่ item_id ตรงกับ activityId
             $matchedPromotions = array_filter($promotions, fn($p) => $p['pro_activity_id'] == $activityId && $p['order_id'] == $orderId);
             $matchedGifts = array_filter($gifts, fn($g) => $g['pro_activity_id'] == $activityId && $g['order_id'] == $orderId);
-        
+
             $productList[] = [
                 'id' => $item['id'],
                 'pro_id' => $item['pro_id'],
@@ -192,6 +209,7 @@
             'order' => $order,
             'productList' => $productList,
             // 'deliveryAddress' => $address // เพิ่มข้อมูลที่อยู่ที่ดึงมา
+            'deliveryAddress' => $address // เพิ่มข้อมูลที่อยู่ที่ดึงมา
         ];
     } catch (Exception $e) {
         $response['success'] = false;

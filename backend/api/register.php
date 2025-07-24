@@ -3,10 +3,12 @@ header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: POST");
 
-require 'conndb.php';
+// require 'conndb.php';
+require_once(__DIR__ . '../db/conndb.php');
 
 // ตรวจสอบว่ามีฟิลด์จำเป็นครบหรือไม่
-$requiredFields = ['emp_ids', 'fullName', 'email', 'password', 'phone', 'address', 'department', 'salary', 'status', 'start_work'];
+$requiredFields = ['emp_ids', 'fullName', 'password', 'phone'];
+// $requiredFields = ['emp_ids', 'fullName', 'email', 'password', 'phone', 'address', 'department', 'salary', 'status', 'start_work'];
 $missing = array_filter($requiredFields, fn($key) => empty($_POST[$key]));
 
 if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
@@ -40,7 +42,8 @@ if (!is_dir($uploadDir)) {
 
 if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePathOnServer)) {
     // สร้าง URL สำหรับเก็บลงฐานข้อมูล
-    $imagePath = 'http://localhost/api_admin_dashboard/backend/img/profile/' . $imageName;
+    $imagePath = 'https://t4nmjgl9-80.asse.devtunnels.ms/api_admin_dashboard/backend/img/profile/' . $imageName;
+    // $imagePath = 'http://localhost/api_admin_dashboard/backend/img/profile/' . $imageName;
 } else {
     echo json_encode(["success" => false, "message" => "Failed to upload image."]);
     exit;
@@ -69,16 +72,16 @@ try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
         ':emp_ids' => $emp_ids,
-        ':image_path' => $imagePath,
+        ':image_path' => $imagePath ? $imagePath : '',
         ':full_name' => $full_name,
-        ':email' => $email,
+        ':email' => $email ? $email : '',
         ':password' => $password_hashed,
-        ':telephone' => $telephone,
-        ':address' => $address,
-        ':department' => $department,
-        ':salary' => $salary,
-        ':status' => $status,
-        ':start_work' => $start_work
+        ':telephone' => $telephone ? $telephone : '',
+        ':address' => $address ? $address : '',
+        ':department' => $department ? $department : '',
+        ':salary' => $salary ? $salary : 0,
+        ':status' => $status ? $status : 'Normal',
+        ':start_work' => $start_work 
     ]);
     
     $lastInsertId = $pdo->lastInsertId();
