@@ -189,19 +189,23 @@
 
             $productList[] = [
                 'id' => $item['id'],
-                'pro_id' => $item['pro_id'],
-                'pro_name' => $item['pro_name'],
-                'sn' => $item['sn'],
-                'qty' => $item['qty'],
+                'pro_sku_price_id' => $item['pro_id'],
+                'pro_erp_title' => $item['pro_name'],
+                'pro_title' => $item['pro_title'],
+                'pro_sn' => $item['sn'],
+                'pro_goods_num' => $item['qty'],
                 'unit_price' => $item['unit_price'],
                 'discount' => $item['discount'],
                 'total_price' => $item['total_price'],
-                'pro_images' => $item['pro_images'],
-                'unit' => $item['unit'],
+                'pro_image' => $item['pro_images'],
+                'pro_units' => $item['unit'],
+                'pro_goods_id' => $item['pro_goods_id'],
                 'pro_activity_id' => $activityId,
+                'activity_id' => $activityId,
                 'promotions' => array_values($matchedPromotions),
                 'gifts' => array_values($matchedGifts),
             ];
+             
         }
 
         $response['success'] = true;

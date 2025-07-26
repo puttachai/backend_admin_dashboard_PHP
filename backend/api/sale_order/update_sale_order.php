@@ -329,41 +329,78 @@ try {
         if ($itemId > 0) { //452
             // ✏️ UPDATE รายการเดิม
             $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
-                pro_id = ?, pro_name = ?, sn = ?, qty = ?, unit_price = ?, discount = ?, 
-                total_price = ?, pro_images = ?, unit = ?, pro_activity_id = ?
+                pro_id = ?, pro_name = ?, pro_title = ?, sn = ?, qty = ?, unit_price = ?, discount = ?, 
+                total_price = ?, pro_images = ?, unit = ?, pro_activity_id = ? , activity_id = ?, pro_goods_id =?
                 WHERE id = ? AND order_id = ?");
             $stmtUpdate->execute([
-                $product['pro_id'] ?? 0,
+                $product['pro_sku_price_id'] ?? 0, //
                 $product['pro_erp_title'] ?? '',
+                $product['pro_title'] ?? '', //
                 $product['pro_sn'] ?? '',
-                $product['pro_quantity'] ?? 0,
+                // $product['pro_quantity'] ?? 0,
+                $product['pro_goods_num'] ?? 0,
                 $product['pro_unit_price'] ?? 0,
                 $product['pro_discount'] ?? 0,
                 $product['pro_total_price'] ?? 0,
-                $product['pro_images'] ?? '',
+                $product['pro_image'] ?? '',
+                // $product['pro_images'] ?? '',
                 $product['pro_units'] ?? '',
                 $product['pro_activity_id'] ?? 0,
+                $product['activity_id'] ?? 0,
+                $product['pro_goods_id'] ?? 0,
                 $itemId,
                 $order_id
+
+                // $product['pro_sku_price_id'] ?? 0,
+                // $product['pro_erp_title'] ?? '',
+                // $product['pro_title'] ?? '',
+                // $product['pro_sn'] ?? '',
+                // $product['pro_goods_num'] ?? 0,
+                // // $product['pro_quantity'] ?? 0,
+                // $product['pro_unit_price'] ?? 0,
+                // $product['pro_discount'] ?? 0,
+                // $product['pro_total_price'] ?? 0,
+                // $product['pro_image'] ?? '',
+                // $product['pro_units'] ?? '',
+                // $product['pro_activity_id'] ?? 0,
+                // $product['activity_id'] ?? 0
+
             ]);
             $newItemIds[] = $itemId;
         } else {
             // 🆕 INSERT รายการใหม่
             $stmtInsert = $pdo->prepare("INSERT INTO sale_order_items (
-                order_id, pro_id, pro_name, sn, qty, unit_price, discount, total_price, pro_images, unit, pro_activity_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                order_id, pro_id, pro_name, pro_title, sn, qty, unit_price, discount, total_price, pro_images, unit, pro_activity_id, activity_id, pro_goods_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmtInsert->execute([
                 $order_id,
-                $product['pro_id'] ?? 0,
+                $product['pro_sku_price_id'] ?? 0, //
                 $product['pro_erp_title'] ?? '',
+                $product['pro_title'] ?? '', //
                 $product['pro_sn'] ?? '',
-                $product['pro_quantity'] ?? 0,
+                // $product['pro_quantity'] ?? 0,
+                $product['pro_goods_num'] ?? 0,
                 $product['pro_unit_price'] ?? 0,
                 $product['pro_discount'] ?? 0,
                 $product['pro_total_price'] ?? 0,
-                $product['pro_images'] ?? '',
+                $product['pro_image'] ?? '',
+                // $product['pro_images'] ?? '',
                 $product['pro_units'] ?? '',
-                $product['pro_activity_id'] ?? 0
+                $product['pro_activity_id'] ?? 0,
+                $product['activity_id'] ?? 0,
+                $product['pro_goods_id'] ?? 0,
+                // $product['pro_id'] ?? 0,
+                // $product['pro_erp_title'] ?? '',
+                // $product['pro_sn'] ?? '',
+                // $product['pro_quantity'] ?? 0,
+                // $product['pro_unit_price'] ?? 0,
+                // $product['pro_discount'] ?? 0,
+                // $product['pro_total_price'] ?? 0,
+                // $product['pro_images'] ?? '',
+                // $product['pro_units'] ?? '',
+                // $product['pro_activity_id'] ?? 0
+
+             
             ]);
             $newItemIds[] = $pdo->lastInsertId();
         }
