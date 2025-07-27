@@ -200,8 +200,11 @@
                 'pro_image' => $item['pro_images'],
                 'pro_units' => $item['unit'],
                 'pro_goods_id' => $item['pro_goods_id'],
+                'st' => $item['st'],
+                'stock' => $item['stock'],
                 'pro_activity_id' => $activityId,
-                'activity_id' => $activityId,
+                'activity_id' => $item['activity_id'],
+                // 'activity_id' => $activityId,
                 'promotions' => array_values($matchedPromotions),
                 'gifts' => array_values($matchedGifts),
             ];
