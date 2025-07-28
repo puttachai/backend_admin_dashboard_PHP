@@ -555,9 +555,9 @@ try {
 
         if (!$exist) {
             $stmt = $pdo->prepare("INSERT INTO sale_order_promotions (
-                order_id, title, ML_Note, note, st, pro_activity_id, pro_sn, pro_goods_id, 
+                order_id, title, ML_Note, note, st, pro_activity_id, activity_id, pro_sn, pro_goods_id, 
                 pro_goods_num, stock, pro_image, pro_sku_price_id, user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $order_id,
                 $promo['title'],
@@ -565,10 +565,11 @@ try {
                 $promo['note'] ?? '',
                 $promo['st'] ?? 0,
                 $promo['pro_activity_id'],
+                $promo['activity_id'],
                 $promo['prosn'] ?? null,
                 $promo['pro_goods_id'],
                 $promo['pro_goods_num'],
-                $promo['stock'],
+                $promo['stock'] ?? 0,
                 $promo['pro_image'],
                 $promo['pro_sku_price_id'],
                 $promo['user_id']
@@ -584,35 +585,40 @@ try {
         $pdo->exec("DELETE FROM sale_order_promotions WHERE order_id = $order_id AND id NOT IN ($idsStr)");
     }
 
+
     // =============== GIFTS ===============
     $gifts = json_decode($_POST['gifts'] ?? '[]', true);
     $newGiftIds = [];
     foreach ($gifts as $gift) {
-        $stmt = $pdo->prepare("SELECT id FROM sale_order_gifts WHERE order_id = ? AND pro_activity_id = ?");
-        $stmt->execute([$order_id, $gift['pro_activity_id']]);
+        $stmt = $pdo->prepare("SELECT id FROM sale_order_gifts WHERE order_id = ? AND pro_sn = ?");
+        $stmt->execute([$order_id, $gift['prosn']]);
+        // $stmt = $pdo->prepare("SELECT id FROM sale_order_gifts WHERE order_id = ? AND pro_activity_id = ?");
+        // $stmt->execute([$order_id, $gift['pro_activity_id']]);
         $exist = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$exist) {
             $stmt = $pdo->prepare("INSERT INTO sale_order_gifts (
                 order_id, pro_sn, title, pro_goods_num, stock, pro_image,
-                ML_Note, note, st, pro_activity_id, pro_goods_id, pro_sku_price_id, user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                ML_Note, note, st, pro_activity_id, activity_id, pro_goods_id, pro_sku_price_id, user_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $order_id,
                 $gift['prosn'],
                 $gift['title'],
                 $gift['pro_goods_num'],
-                $gift['stock'],
+                $gift['stock'] ?? 0,
                 $gift['pro_image'],
                 $gift['ML_Note'],
                 $gift['note'],
                 $gift['st'] ?? 0,
                 $gift['pro_activity_id'],
+                $gift['activity_id'],
                 $gift['pro_goods_id'],
                 $gift['pro_sku_price_id'],
                 $gift['user_id']
             ]);
             $newGiftIds[] = $pdo->lastInsertId();
+            
         } else {
             $newGiftIds[] = $exist['id'];
         }

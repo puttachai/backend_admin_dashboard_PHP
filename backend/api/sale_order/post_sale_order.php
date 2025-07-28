@@ -486,9 +486,9 @@ try {
         if (!$existingPromo) {
             $stmtInsertPromo = $pdo->prepare("
             INSERT INTO sale_order_promotions (
-                order_id, title, ML_Note, note, st, pro_activity_id, pro_sn, 
+                order_id, title, ML_Note, note, st, pro_activity_id, activity_id, pro_sn, 
                 pro_goods_id, pro_goods_num, stock, pro_image, pro_sku_price_id, user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
             $stmtInsertPromo->execute([
                 $order_id,
@@ -497,6 +497,7 @@ try {
                 $promo['note'] ?? '',
                 $promo['st'] ?? 0,
                 $promo['pro_activity_id'] ?? null,
+                $promo['activity_id'] ?? 0,
                 $promo['prosn'] ?? null,
                 $promo['stock'] ?? 0,
                 $promo['pro_goods_id'] ?? null,
@@ -547,8 +548,8 @@ try {
         if (!$existingGift) {
             $stmtInsertGift = $pdo->prepare("INSERT INTO sale_order_gifts (
                 order_id, pro_sn, title, pro_goods_num, stock, pro_image,
-                ML_Note, note, st, pro_activity_id, pro_goods_id, pro_sku_price_id, user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                ML_Note, note, st, pro_activity_id, activity_id, pro_goods_id, pro_sku_price_id, user_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmtInsertGift->execute([
                 $order_id,
                 $gift['prosn'],
@@ -560,6 +561,7 @@ try {
                 $gift['note'] ?? '',
                 $gift['st'] ?? 0,
                 $gift['pro_activity_id'] ?? null,
+                $gift['activity_id'] ?? 0,
                 $gift['pro_goods_id'] ?? null,
                 $gift['pro_sku_price_id'] ?? null,
                 $gift['user_id'] ?? null,

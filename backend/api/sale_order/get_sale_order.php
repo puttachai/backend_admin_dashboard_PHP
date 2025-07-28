@@ -166,7 +166,7 @@
         //  ':customer_code' => $customerCode
         $stmtAddress->execute([
             ':order_id' => $orderId,
-           
+
         ]);
         $address = $stmtAddress->fetch(PDO::FETCH_ASSOC);
 
@@ -180,36 +180,121 @@
         // รวมข้อมูลเข้า productList
         $productList = [];
 
+        // foreach ($items as $item) {
+        //     $activityId = $item['pro_activity_id'] ?? null;
+
+        //     // MATCH PROMOTION BY: order_id + pro_sn + (st match OR st opposite but same pro_sn)
+        //     $matchedPromotions = array_filter($promotions, function ($p) use ($item, $orderId) {
+        //         return $p['order_id'] == $orderId &&
+        //             // $p['pro_sn'] == $item['sn'] &&
+        //             $p['st'] === true;
+        //             $p['pro_activity_id'] == $item['pro_activity_id']&&
+        //             (
+        //                 $p['st'] == $item['st'] ||
+        //                 $p['st'] != $item['st'] // กรณีตรงกันหรือไม่ตรงก็ได้ แค่ sn ตรง
+        //             );
+        //     });
+
+        //     // ใช้ promotion ตัวแรก (หรือทั้งหมด) เพื่อจับ gift
+        //     $matchedGifts = [];
+        //     foreach ($matchedPromotions as $promo) {
+        //         $giftsForThisPromo = array_filter($gifts, function ($g) use ($promo) {
+        //             return $g['order_id'] == $promo['order_id'] &&
+        //                 $g['st'] === true;
+        //                 $g['pro_activity_id'] == $promo['pro_activity_id'] &&
+        //                 $g['st'] == $promo['st'];
+        //         });
+        //         $matchedGifts = array_merge($matchedGifts, $giftsForThisPromo);
+        //     }
+
+        //     $productList[] = [
+        //         'id' => $item['id'],
+        //         'pro_sku_price_id' => $item['pro_id'],
+        //         'pro_erp_title' => $item['pro_name'],
+        //         'pro_title' => $item['pro_title'],
+        //         'pro_sn' => $item['sn'],
+        //         'pro_goods_num' => $item['qty'],
+        //         'unit_price' => $item['unit_price'],
+        //         'discount' => $item['discount'],
+        //         'total_price' => $item['total_price'],
+        //         'pro_image' => $item['pro_images'],
+        //         'pro_units' => $item['unit'],
+        //         'pro_goods_id' => $item['pro_goods_id'],
+        //         'st' => $item['st'],
+        //         'stock' => $item['stock'],
+        //         'pro_activity_id' => $activityId,
+        //         'activity_id' => $item['activity_id'],
+        //         'promotions' => array_values($matchedPromotions),
+        //         'gifts' => array_values($matchedGifts),
+        //     ];
+        // }
+
+
         foreach ($items as $item) {
-            $activityId = $item['pro_activity_id'] ?? null;
+            // foreach ($gifts as $gift) {
+                // $activityId = $item['pro_activity_id'] ?? null;
 
-            // ดึงเฉพาะ promotions/gifts ที่ item_id ตรงกับ activityId
-            $matchedPromotions = array_filter($promotions, fn($p) => $p['pro_activity_id'] == $activityId && $p['order_id'] == $orderId);
-            $matchedGifts = array_filter($gifts, fn($g) => $g['pro_activity_id'] == $activityId && $g['order_id'] == $orderId);
+                // ดึงเฉพาะ promotions/gifts ที่ item_id ตรงกับ activityId
+                // $matchedPromotions = array_filter($promotions, fn($p) => $p['pro_activity_id'] == $activityId && $p['order_id'] == $orderId && (bool)$p['st'] == (bool)$item['st']);
+                // $matchedGifts = array_filter($gifts, fn($g) => $g['pro_activity_id'] == $activityId && $g['order_id'] == $orderId && (bool)$g['st'] == (bool)$item['st']);
 
-            $productList[] = [
-                'id' => $item['id'],
-                'pro_sku_price_id' => $item['pro_id'],
-                'pro_erp_title' => $item['pro_name'],
-                'pro_title' => $item['pro_title'],
-                'pro_sn' => $item['sn'],
-                'pro_goods_num' => $item['qty'],
-                'unit_price' => $item['unit_price'],
-                'discount' => $item['discount'],
-                'total_price' => $item['total_price'],
-                'pro_image' => $item['pro_images'],
-                'pro_units' => $item['unit'],
-                'pro_goods_id' => $item['pro_goods_id'],
-                'st' => $item['st'],
-                'stock' => $item['stock'],
-                'pro_activity_id' => $activityId,
-                'activity_id' => $item['activity_id'],
-                // 'activity_id' => $activityId,
-                'promotions' => array_values($matchedPromotions),
-                'gifts' => array_values($matchedGifts),
-            ];
-             
-        }
+                $activityId = $item['pro_activity_id'];
+                $itemSt = (bool)$item['st'];
+
+                // เตรียม array ว่างก่อน
+                $matchedPromotions = [];
+                $matchedGifts = [];
+
+                // ถ้าสถานะ st ของ item === true
+                if ($itemSt === true) {
+                    $matchedPromotions = array_filter($promotions, function ($p) use ($orderId, $activityId, $itemSt) {
+                        return $p['order_id'] == $orderId &&
+                            $p['pro_activity_id'] == $activityId &&
+                            (bool)$p['st'] === $itemSt;
+                    });
+                    $matchedGifts = array_filter($gifts, function ($g) use ($orderId, $activityId, $itemSt) {
+                        return $g['order_id'] == $orderId &&
+                            $g['pro_activity_id'] == $activityId &&
+                            (bool)$g['st'] === $itemSt;
+                    });
+                }
+                // ถ้า st === false
+                else {
+                    $matchedPromotions = array_filter($promotions, function ($p) use ($orderId, $activityId, $itemSt) {
+                        return $p['order_id'] == $orderId &&
+                            // $p['activity_id'] == $activityId &&
+                            (bool)$p['st'] === $itemSt;
+                    });
+                    $matchedGifts = array_filter($gifts, function ($g) use ($orderId, $activityId, $itemSt) {
+                        return $g['order_id'] == $orderId &&
+                            $g['pro_activity_id'] != $activityId &&
+                            (bool)$g['st'] === $itemSt;
+                    });
+                }
+
+                $productList[] = [
+                    'id' => $item['id'],
+                    'pro_sku_price_id' => $item['pro_id'],
+                    'pro_erp_title' => $item['pro_name'],
+                    'pro_title' => $item['pro_title'],
+                    'pro_sn' => $item['sn'],
+                    'pro_goods_num' => $item['qty'],
+                    'unit_price' => $item['unit_price'],
+                    'discount' => $item['discount'],
+                    'total_price' => $item['total_price'],
+                    'pro_image' => $item['pro_images'],
+                    'pro_units' => $item['unit'],
+                    'pro_goods_id' => $item['pro_goods_id'],
+                    'st' => $item['st'],
+                    'stock' => $item['stock'],
+                    'pro_activity_id' => $activityId,
+                    'activity_id' => $item['activity_id'],
+                    // 'activity_id' => $activityId,
+                    'promotions' => array_values($matchedPromotions),
+                    'gifts' => array_values($matchedGifts),
+                ];
+            }
+        // }
 
         $response['success'] = true;
         $response['data'] = [
@@ -224,12 +309,6 @@
     }
 
     echo json_encode($response);
-
-
-
-
-
-
 
 
          // foreach ($items as $item) {
