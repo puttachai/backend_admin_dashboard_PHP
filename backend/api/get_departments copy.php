@@ -2,7 +2,8 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
-require 'conndb.php';
+// require 'conndb.php';
+require_once(__DIR__ . '../db/conndb.php');
 
 try {
     // ดึง department ไม่ซ้ำ

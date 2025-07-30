@@ -42,7 +42,7 @@ if (!is_dir($uploadDir)) {
 
 if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePathOnServer)) {
     // สร้าง URL สำหรับเก็บลงฐานข้อมูล
-    $imagePath = 'https://t4nmjgl9-80.asse.devtunnels.ms/api_admin_dashboard/backend/img/profile/' . $imageName;
+    $imagePath = 'http://localhost/api_admin_dashboard/backend/img/profile/' . $imageName;
     // $imagePath = 'http://localhost/api_admin_dashboard/backend/img/profile/' . $imageName;
 } else {
     echo json_encode(["success" => false, "message" => "Failed to upload image."]);

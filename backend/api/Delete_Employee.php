@@ -5,7 +5,9 @@ header("Access-Control-Allow-Methods: DELETE");
 header("Access-Control-Allow-Methods: DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 
-require 'conndb.php';
+// require 'conndb.php';
+// require 'conndb.php';
+require_once(__DIR__ . '../db/conndb.php');
 
 // รับค่าจาก frontend
 $data = json_decode(file_get_contents("php://input"), true);

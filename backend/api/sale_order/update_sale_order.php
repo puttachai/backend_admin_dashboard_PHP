@@ -252,6 +252,7 @@ try {
     $prefix = substr($documentNo, 0, strrpos($documentNo, '-'));
 
     // file_get_contents(__DIR__ . '/../update_documentrunning.php');
+    // $updateDocResponse = file_get_contents("http://localhost:86/backend/api/document_running/update_documentrunning.php", false, stream_context_create([
     $updateDocResponse = file_get_contents("http://localhost/api_admin_dashboard/backend/api/document_running/update_documentrunning.php", false, stream_context_create([
         'http' => [
             'method' => 'POST',

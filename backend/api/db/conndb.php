@@ -3,7 +3,7 @@
 header("Access-Control-Allow-Origin: *"); // หรือระบุ origin เฉพาะแทน * ก็ได้
 header("Content-Type: application/json; charset=UTF-8");
 
-// $localhost = 'https://backend2.d-power.online:56916';
+// $localhost = 'localhost';
 // $dbname = 'admin_dashboard';
 // $username = 'root';
 // $password = '#Dpower123';
