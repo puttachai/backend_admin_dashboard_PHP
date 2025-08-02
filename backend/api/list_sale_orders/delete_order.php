@@ -1,4 +1,14 @@
 <?php
+
+// ถ้าคำขอเป็น OPTIONS (preflight), ให้ตอบกลับทันที
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header("Access-Control-Allow-Origin: *"); // หรือเฉพาะ origin ก็ได้
+    header("Access-Control-Allow-Methods: POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type");
+    http_response_code(204);
+    exit;
+}
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
