@@ -157,14 +157,14 @@ try {
 
         if ($existing) {
             $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
-                pro_id = ?, pro_name = ?, pro_title = ?, pro_goods_sku_text = ?, qty = ?, stock = ?, unit_price = ?, discount = ?, 
-                total_price = ?, pro_images = ?, unit = ?, st = ?, pro_activity_id = ? , activity_id = ?, st = ?, pro_goods_id = ?
+                pro_id = ?, pro_name = ?, pro_title = ? , pro_goods_sku_text = ?, qty = ?, stock = ?, unit_price = ?, discount = ?, 
+                total_price = ?, pro_images = ?, unit = ?, sn = ?, st = ?, pro_activity_id = ? , activity_id = ?, pro_goods_id = ?
                 WHERE id = ?");
             $stmtUpdate->execute([
                 $product['pro_sku_price_id'] ?? 0,
                 $product['pro_erp_title'] ?? '',
                 $product['pro_title'] ?? '',
-                $gift['pro_goods_sku_text'] ?? '',
+                $product['pro_goods_sku_text'] ?? '',
                 $product['pro_goods_num'],
                 $product['stock'] ?? 0,
                 // $product['pro_quantity'] ?? 0,
@@ -251,6 +251,7 @@ try {
                     }
                 }
             }
+            
 
             // --- 3) Gifts ที่อยู่ในตัวสินค้า ---
             if (!empty($product['gifts'])) {
@@ -274,6 +275,7 @@ try {
                       pro_goods_id = ?, pro_goods_num = ?, stock = ?, pro_image = ?, user_id = ?
                     WHERE id = ?
                 ");
+                // pro_goods_sku_text
                         $upd->execute([
                             $gift['title'],
                             $gift['ML_Note'],
@@ -292,7 +294,7 @@ try {
                         // INSERT sale_order_item_id
                         $ins = $pdo->prepare("
                     INSERT INTO sale_order_gifts (
-                        order_id, pro_sn, pro_goods_sku_text ,
+                        order_id, pro_sn, pro_goods_sku_text,
                         pro_activity_id, pro_sku_price_id,
                         title, ML_Note, note, st, activity_id,
                         pro_goods_id, pro_goods_num, stock, pro_image, user_id
@@ -323,16 +325,15 @@ try {
             }
         } else {
             $stmtInsert = $pdo->prepare("INSERT INTO sale_order_items (
-    order_id, pro_id, pro_name, pro_title, pro_goods_sku_text, sn, qty, stock, unit_price, discount, total_price, pro_images, unit, st, pro_activity_id, activity_id, pro_goods_id
+    order_id, pro_id, pro_goods_sku_text, pro_name, pro_title, sn, qty, stock, unit_price, discount, total_price, pro_images, unit, st, pro_activity_id, activity_id, pro_goods_id
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             $stmtInsert->execute([
                 $order_id,
                 $product['pro_sku_price_id'] ?? 0,
+                $product['pro_goods_sku_text'] ?? '',
                 $product['pro_erp_title'] ?? '',
                 $product['pro_title'] ?? '',
-                $product['pro_goods_sku_text'] ?? '',
-                
                 $product['pro_sn'] ?? '',
                 $product['pro_goods_num'],
                 $product['stock'] ?? 0,
@@ -354,6 +355,7 @@ try {
                 $order_id,
                 $product['pro_id'] ?? 0,
                 $product['pro_erp_title'] ?? '',
+                $product['pro_goods_sku_text'] ?? '',
                 $product['pro_sn'] ?? '',
                 $product['pro_quantity'] ?? 0,
                 $product['pro_unit_price'] ?? 0,
@@ -476,11 +478,11 @@ try {
                         // INSERT sale_order_item_id
                         $ins = $pdo->prepare("
                     INSERT INTO sale_order_gifts (
-                        order_id, pro_sn, pro_goods_sku_text ,
+                        order_id, pro_sn, pro_goods_sku_text,
                         pro_activity_id, pro_sku_price_id,
                         title, ML_Note, note, st, activity_id,
                         pro_goods_id, pro_goods_num, stock, pro_image, user_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 // , ?
                         $ins->execute([

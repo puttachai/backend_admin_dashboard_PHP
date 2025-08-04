@@ -278,6 +278,7 @@
                     'pro_erp_title' => $item['pro_name'],
                     'pro_title' => $item['pro_title'],
                     'pro_sn' => $item['sn'],
+                    'pro_goods_sku_text' => $item['pro_goods_sku_text'],
                     'pro_goods_num' => $item['qty'],
                     'unit_price' => $item['unit_price'],
                     'discount' => $item['discount'],

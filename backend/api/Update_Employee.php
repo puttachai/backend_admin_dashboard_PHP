@@ -43,6 +43,7 @@ if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
 
     if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePathOnServer)) {
         $imagePath = 'http://localhost/api_admin_dashboard/backend/img/profile/' . $imageName;
+        // $imagePath = 'https://backend2.d-power.online:56916/api_admin_dashboard/backend/img/profile/' . $imageName;
     } else {
         echo json_encode(["success" => false, "message" => "Failed to upload image."]);
         exit;

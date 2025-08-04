@@ -330,14 +330,17 @@ try {
         if ($itemId > 0) { //452
             // ✏️ UPDATE รายการเดิม
             $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
-                pro_id = ?, pro_name = ?, pro_title = ?, sn = ?, qty = ?, stock = ?, unit_price = ?, discount = ?, 
+                pro_id = ?, pro_name = ?, pro_title = ?, pro_goods_sku_text = ?, sn = ?, pro_goods_sku_text = ?, qty = ?, stock = ?, unit_price = ?, discount = ?, 
                 total_price = ?, pro_images = ?, unit = ?, st = ?, pro_activity_id = ? , activity_id = ?, pro_goods_id =?
                 WHERE id = ? AND order_id = ?");
             $stmtUpdate->execute([
                 $product['pro_sku_price_id'] ?? 0, //
                 $product['pro_erp_title'] ?? '',
                 $product['pro_title'] ?? '', //
+                $product['pro_goods_sku_text'] ?? '', //
+                
                 $product['pro_sn'] ?? '',
+                $product['pro_goods_sku_text'] ?? '',
                 // $product['pro_quantity'] ?? 0,
                 $product['pro_goods_num'] ?? 0,
                 $product['stock'] ?? 0,
@@ -373,11 +376,12 @@ try {
         } else {
             // 🆕 INSERT รายการใหม่
             $stmtInsert = $pdo->prepare("INSERT INTO sale_order_items (
-                order_id, pro_id, pro_name, pro_title, sn, qty, stock, unit_price, discount, total_price, pro_images, unit, st, pro_activity_id, activity_id, pro_goods_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                order_id, pro_id, pro_goods_sku_text, pro_name, pro_title, sn, qty, stock, unit_price, discount, total_price, pro_images, unit, st, pro_activity_id, activity_id, pro_goods_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmtInsert->execute([
                 $order_id,
                 $product['pro_sku_price_id'] ?? 0, //
+                $product['pro_goods_sku_text'] ?? '',
                 $product['pro_erp_title'] ?? '',
                 $product['pro_title'] ?? '', //
                 $product['pro_sn'] ?? '',
@@ -599,12 +603,13 @@ try {
 
         if (!$exist) {
             $stmt = $pdo->prepare("INSERT INTO sale_order_gifts (
-                order_id, pro_sn, title, pro_goods_num, stock, pro_image,
+                order_id, pro_sn, pro_goods_sku_text, title, pro_goods_num, stock, pro_image,
                 ML_Note, note, st, pro_activity_id, activity_id, pro_goods_id, pro_sku_price_id, user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $order_id,
                 $gift['prosn'],
+                $gift['pro_goods_sku_text'],
                 $gift['title'],
                 $gift['pro_goods_num'],
                 $gift['stock'] ?? 0,
