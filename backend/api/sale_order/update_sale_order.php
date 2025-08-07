@@ -289,7 +289,8 @@ try {
         receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, 
         delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
         final_total_price = ?,
-        price_before_tax = ?, tax_value = ?, price_with_tax = ?
+        price_before_tax = ?, tax_value = ?, price_with_tax = ?,
+        vat_visible = ?
         WHERE id = ?");
     $stmt->execute([
         $_POST['listCode'] ?? '',
@@ -317,6 +318,7 @@ try {
         $_POST['price_before_tax'] ?? 0,
         $_POST['tax_value'] ?? 0,
         $_POST['price_with_tax'] ?? 0,
+        $_POST['vatVisible'] ?? 0,
         $order_id
     ]);
 

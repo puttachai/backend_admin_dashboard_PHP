@@ -39,8 +39,9 @@ try {
             receiver_name, receiver_phone, receiver_email, receiver_address, note, 
             delivery_date, tracking_no, delivery_type, total_discount, delivery_fee, 
             discount_qty, final_total_price, 
-            price_before_tax, tax_value, price_with_tax
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            price_before_tax, tax_value, price_with_tax,
+            vat_visible
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $stmtInsertOrder->execute([
             $documentNo,
@@ -70,7 +71,8 @@ try {
             //
             $_POST['price_before_tax'] ?? 0,  // เพิ่มนี้
             $_POST['tax_value'] ?? 0,         // เพิ่มนี้
-            $_POST['price_with_tax'] ?? 0     // เพิ่มนี้
+            $_POST['price_with_tax'] ?? 0,     // เพิ่มนี้
+            $_POST['vatVisible'] ?? 0
         ]);
 
         $order_id = $pdo->lastInsertId(); // เก็บ order_id ที่สร้างใหม่ไว้ใช้ต่อ
@@ -105,7 +107,7 @@ try {
             receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, 
             delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
             discount_qty = ?,final_total_price = ?,
-            price_before_tax = ?, tax_value = ?, price_with_tax = ? 
+            price_before_tax = ?, tax_value = ?, price_with_tax = ?, vat_visible = ?
             WHERE id = ?");
         $stmt->execute([
             $_POST['listCode'] ?? '',
@@ -134,6 +136,7 @@ try {
             $_POST['price_before_tax'] ?? 0,  // เพิ่มนี้
             $_POST['tax_value'] ?? 0,         // เพิ่มนี้
             $_POST['price_with_tax'] ?? 0,    // เพิ่มนี้
+            $_POST['vatVisible'] ?? 0,    // เพิ่มนี้ || vat_visible
             $order_id
         ]);
     }

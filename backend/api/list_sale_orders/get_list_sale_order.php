@@ -62,13 +62,27 @@ try {
     }
 
     // ดึงจำนวนรวมที่ตรงเงื่อนไข
-    $totalStmt = $pdo->prepare("SELECT COUNT(*) AS cnt FROM sale_order $whereSql");
+    // $totalStmt = $pdo->prepare("SELECT COUNT(*) AS cnt FROM sale_order $whereSql");
+    $totalStmt = $pdo->prepare(
+        "SELECT COUNT(*) AS cnt
+        FROM sale_order so
+        LEFT JOIN employee e ON so.customer_code = e.customer_no
+        $whereSql"
+    );
     $totalStmt->execute($params);
     $total = $totalStmt->fetch(PDO::FETCH_ASSOC)['cnt'];
 
     // ดึงข้อมูลหน้าที่ (พร้อมเงื่อนไข search)
+    // $stmt = $pdo->prepare(
+    //     "SELECT * FROM sale_order $whereSql ORDER BY created_at DESC LIMIT :limit OFFSET :offset"
+    // );
     $stmt = $pdo->prepare(
-        "SELECT * FROM sale_order $whereSql ORDER BY created_at DESC LIMIT :limit OFFSET :offset"
+        "SELECT so.*, e.full_name AS employee_name, e.telephone AS employee_phone
+        FROM sale_order so
+        LEFT JOIN employee e ON so.customer_code = e.customer_no
+        $whereSql
+        ORDER BY so.created_at DESC
+        LIMIT :limit OFFSET :offset"
     );
 
     // bind search param ถ้ามี
