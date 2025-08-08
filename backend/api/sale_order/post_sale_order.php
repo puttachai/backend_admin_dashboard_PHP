@@ -60,6 +60,7 @@ try {
             $_POST['receiverEmail'] ?? '',
             $_POST['receiverAddress'] ?? '',
             $_POST['note'] ?? '',
+            $_POST['workDetail'] ?? '',
             $deliveryDate,
             $_POST['trackingNo'] ?? '',
             $_POST['deliveryType'] ?? '',
@@ -104,7 +105,7 @@ try {
         $stmt = $pdo->prepare("UPDATE sale_order SET 
             list_code = ?, sell_date = ?, reference = ?, channel = ?, tax_type = ?, 
             full_name = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
-            receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, 
+            receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, workDetail = ?,
             delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
             discount_qty = ?,final_total_price = ?,
             price_before_tax = ?, tax_value = ?, price_with_tax = ?, vat_visible = ?
@@ -125,6 +126,7 @@ try {
             $_POST['receiverEmail'] ?? '',
             $_POST['receiverAddress'] ?? '',
             $_POST['note'] ?? '',
+            $_POST['workDetail'] ?? '',
             $deliveryDate,
             $_POST['trackingNo'] ?? '',
             $_POST['deliveryType'] ?? '',

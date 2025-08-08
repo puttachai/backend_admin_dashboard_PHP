@@ -286,7 +286,7 @@ try {
     $stmt = $pdo->prepare("UPDATE sale_order SET 
         list_code = ?, sell_date = ?, reference = ?, channel = ?, tax_type = ?, 
         full_name = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
-        receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, 
+        receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, workDetail = ?,
         delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
         final_total_price = ?,
         price_before_tax = ?, tax_value = ?, price_with_tax = ?,
@@ -308,6 +308,7 @@ try {
         $_POST['receiverEmail'] ?? '',
         $_POST['receiverAddress'] ?? '',
         $_POST['note'] ?? '',
+        $_POST['workDetail'] ?? '',
         $deliveryDate,
         $_POST['trackingNo'] ?? '',
         $_POST['deliveryType'] ?? '',
@@ -598,7 +599,8 @@ try {
     $newGiftIds = [];
     foreach ($gifts as $gift) {
         $stmt = $pdo->prepare("SELECT id FROM sale_order_gifts WHERE order_id = ? AND pro_sn = ?");
-        $stmt->execute([$order_id, $gift['prosn']]);
+        $stmt->execute([$order_id, $gift['pro_sn'] ?? $gift['prosn'] ?? '']);
+        // $stmt->execute([$order_id, $gift['prosn']]);
         // $stmt = $pdo->prepare("SELECT id FROM sale_order_gifts WHERE order_id = ? AND pro_activity_id = ?");
         // $stmt->execute([$order_id, $gift['pro_activity_id']]);
         $exist = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -610,7 +612,8 @@ try {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $order_id,
-                $gift['prosn'],
+                // $gift['prosn'],
+                $gift['pro_sn'] ?? $gift['prosn'] ?? '', // <-- ใช้ pro_sn ถ้ามี, ถ้าไม่มีก็ prosn, ถ้าไม่มีเลยเป็น ''
                 $gift['pro_goods_sku_text'],
                 $gift['title'],
                 $gift['pro_goods_num'],
