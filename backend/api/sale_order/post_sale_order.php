@@ -36,12 +36,12 @@ try {
         $stmtInsertOrder = $pdo->prepare("INSERT INTO sale_order (
             document_no, list_code, sell_date, reference, channel, tax_type, 
             full_name, customer_code, phone, email, address, 
-            receiver_name, receiver_phone, receiver_email, receiver_address, note, 
+            receiver_name, receiver_phone, receiver_email, receiver_address, note, work_detail, 
             delivery_date, tracking_no, delivery_type, total_discount, delivery_fee, 
             discount_qty, final_total_price, 
             price_before_tax, tax_value, price_with_tax,
             vat_visible
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $stmtInsertOrder->execute([
             $documentNo,
@@ -105,7 +105,7 @@ try {
         $stmt = $pdo->prepare("UPDATE sale_order SET 
             list_code = ?, sell_date = ?, reference = ?, channel = ?, tax_type = ?, 
             full_name = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
-            receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, workDetail = ?,
+            receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, work_detail = ?,
             delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
             discount_qty = ?,final_total_price = ?,
             price_before_tax = ?, tax_value = ?, price_with_tax = ?, vat_visible = ?
@@ -163,13 +163,13 @@ try {
         if ($existing) {
             $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
                 pro_id = ?, pro_name = ?, pro_title = ?, pro_goods_sku_text = ?, qty = ?, stock = ?, unit_price = ?, discount = ?, 
-                total_price = ?, pro_images = ?, unit = ?, st = ?, pro_activity_id = ? , activity_id = ?, st = ?, pro_goods_id = ?
+                total_price = ?, pro_images = ?, unit = ?, st = ?, pro_activity_id = ? , activity_id = ?, pro_goods_id = ?
                 WHERE id = ?");
             $stmtUpdate->execute([
                 $product['pro_sku_price_id'] ?? 0,
                 $product['pro_erp_title'] ?? '',
                 $product['pro_title'] ?? '',
-                $gift['pro_goods_sku_text'] ?? '',
+                $product['pro_goods_sku_text'] ?? '',
                 $product['pro_goods_num'],
                 $product['stock'] ?? 0,
                 // $product['pro_quantity'] ?? 0,

@@ -153,8 +153,16 @@
 
 
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Content-Type: application/json; charset=UTF-8");
+
+// 👇 สำคัญมาก: ตอบกลับ OPTIONS ทันที
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
 
 require_once(__DIR__ . '/../db/conndb.php');
 // require_once('conndb.php');
@@ -252,7 +260,7 @@ try {
     $prefix = substr($documentNo, 0, strrpos($documentNo, '-'));
 
     // file_get_contents(__DIR__ . '/../update_documentrunning.php');
-    // $updateDocResponse = file_get_contents("http://localhost:86/backend/api/document_running/update_documentrunning.php", false, stream_context_create([
+    // $updateDocResponse = file_get_contents("http://localhost:86/api_admin_dashboard/backend/api/document_running/update_documentrunning.php", false, stream_context_create([
     $updateDocResponse = file_get_contents("http://localhost/api_admin_dashboard/backend/api/document_running/update_documentrunning.php", false, stream_context_create([
         'http' => [
             'method' => 'POST',
@@ -286,7 +294,7 @@ try {
     $stmt = $pdo->prepare("UPDATE sale_order SET 
         list_code = ?, sell_date = ?, reference = ?, channel = ?, tax_type = ?, 
         full_name = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
-        receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, workDetail = ?,
+        receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, work_detail = ?,
         delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
         final_total_price = ?,
         price_before_tax = ?, tax_value = ?, price_with_tax = ?,
@@ -333,7 +341,7 @@ try {
         if ($itemId > 0) { //452
             // ✏️ UPDATE รายการเดิม
             $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
-                pro_id = ?, pro_name = ?, pro_title = ?, pro_goods_sku_text = ?, sn = ?, pro_goods_sku_text = ?, qty = ?, stock = ?, unit_price = ?, discount = ?, 
+                pro_id = ?, pro_name = ?, pro_title = ?, pro_goods_sku_text = ?, sn = ?, qty = ?, stock = ?, unit_price = ?, discount = ?, 
                 total_price = ?, pro_images = ?, unit = ?, st = ?, pro_activity_id = ? , activity_id = ?, pro_goods_id =?
                 WHERE id = ? AND order_id = ?");
             $stmtUpdate->execute([
@@ -343,7 +351,6 @@ try {
                 $product['pro_goods_sku_text'] ?? '', //
                 
                 $product['pro_sn'] ?? '',
-                $product['pro_goods_sku_text'] ?? '',
                 // $product['pro_quantity'] ?? 0,
                 $product['pro_goods_num'] ?? 0,
                 $product['stock'] ?? 0,
