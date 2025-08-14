@@ -275,7 +275,10 @@
                 $productList[] = [
                     'id' => $item['id'],
                     'pro_sku_price_id' => $item['pro_id'],
-                    'pro_erp_title' => $item['pro_name'],
+                    // 'pro_erp_title' => $item['pro_name'],
+                    'pro_erp_title' => ($item['pro_name'] == "0" || empty($item['pro_name'])) 
+                        ? $item['pro_title'] 
+                        : $item['pro_name'],
                     'pro_title' => $item['pro_title'],
                     'pro_sn' => $item['sn'],
                     'pro_goods_sku_text' => $item['pro_goods_sku_text'],
