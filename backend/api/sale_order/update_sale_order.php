@@ -256,35 +256,44 @@ try {
         $response['warning'] = 'ไม่มีข้อมูลที่อยู่สำหรับจัดส่ง';
     }
 
+
+
+    ////////////////////////////////////////////////////////
+
+
     // 👇 STEP: เรียก API เพื่ออัปเดตเอกสาร (เหมือนโค้ดเก่า)
-    $prefix = substr($documentNo, 0, strrpos($documentNo, '-'));
+    // $prefix = substr($documentNo, 0, strrpos($documentNo, '-'));
 
-    // file_get_contents(__DIR__ . '/../update_documentrunning.php');
-    // $updateDocResponse = file_get_contents("http://localhost:86/api_admin_dashboard/backend/api/document_running/update_documentrunning.php", false, stream_context_create([
-    $updateDocResponse = file_get_contents("http://localhost/api_admin_dashboard/backend/api/document_running/update_documentrunning.php", false, stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => 'Content-Type: application/json',
-            'content' => json_encode(['prefix' => $prefix])
-        ]
-    ]));
+    // // file_get_contents(__DIR__ . '/../update_documentrunning.php');
+    // // $updateDocResponse = file_get_contents("http://localhost:86/api_admin_dashboard/backend/api/document_running/update_documentrunning.php", false, stream_context_create([
+    // $updateDocResponse = file_get_contents("http://localhost/api_admin_dashboard/backend/api/document_running/update_documentrunning.php", false, stream_context_create([
+    //     'http' => [
+    //         'method' => 'POST',
+    //         'header' => 'Content-Type: application/json',
+    //         'content' => json_encode(['prefix' => $prefix])
+    //     ]
+    // ]));
     
-    // หรือถ้าจะเรียก API จริงๆ ใช้ CURL แทนจะดีกว่า เช่น
-    // $ch = curl_init('http://localhost/api_admin_dashboard/backend/api/update_documentrunning.php');
-    // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    // $response = curl_exec($ch);
-    // curl_close($ch);
+    // // หรือถ้าจะเรียก API จริงๆ ใช้ CURL แทนจะดีกว่า เช่น
+    // // $ch = curl_init('http://localhost/api_admin_dashboard/backend/api/update_documentrunning.php');
+    // // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    // // $response = curl_exec($ch);
+    // // curl_close($ch);
 
-    $updateDocData = json_decode($updateDocResponse, true);
-    if (!$updateDocData['success']) {
-        throw new Exception($updateDocData['message']);
-    }
+    // $updateDocData = json_decode($updateDocResponse, true);
+    // if (!$updateDocData['success']) {
+    //     throw new Exception($updateDocData['message']);
+    // }
 
-    $newDocumentNo = $updateDocData['doc_number'];
+    // $newDocumentNo = $updateDocData['doc_number'];
 
-    // 👇 STEP: อัปเดต documentNo ใหม่ให้ตาราง sale_order
-    $stmtUpdateDoc = $pdo->prepare("UPDATE sale_order SET document_no = ? WHERE id = ?");
-    $stmtUpdateDoc->execute([$newDocumentNo, $order_id]);
+    // // 👇 STEP: อัปเดต documentNo ใหม่ให้ตาราง sale_order
+    // $stmtUpdateDoc = $pdo->prepare("UPDATE sale_order SET document_no = ? WHERE id = ?");
+    // $stmtUpdateDoc->execute([$newDocumentNo, $order_id]);
+
+    $newDocumentNo = $documentNo;
+
+    ////////////////////////////////////////////////////////
 
     // อย่าลืมใช้ตัวแปรนี้แทน documentNo เดิมด้านล่าง
     // $documentNo = $newDocumentNo;
@@ -647,8 +656,113 @@ try {
         $pdo->exec("DELETE FROM sale_order_gifts WHERE order_id = $order_id AND id NOT IN ($idsStr)");
     }
 
+
+     //  ดึงข้อมูล order ล่าสุดและส่งกลับ
+    $stmt = $pdo->prepare("SELECT * FROM sale_order WHERE id = ?");
+    $stmt->execute([$order_id]);
+    $orderData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$orderData) {
+        throw new Exception("ไม่พบคำสั่งขายที่เพิ่งบันทึก");
+    }
+
+    // 👉 แปลงวันที่สำหรับแสดงผล
+    $orderData['sell_date']     = convertDateToMySQLFormat($orderData['sell_date']);
+    $orderData['delivery_date'] = convertDateToMySQLFormat($orderData['delivery_date']);
+
+    // ✅ ดึงสินค้า
+    $stmtItems = $pdo->prepare("SELECT * FROM sale_order_items WHERE order_id = ?");
+    $stmtItems->execute([$order_id]);
+    $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+
+    // ✅ ดึง promotions
+    $stmtPromos = $pdo->prepare("SELECT * FROM sale_order_promotions WHERE order_id = ?");
+    $stmtPromos->execute([$order_id]);
+    $promotions = $stmtPromos->fetchAll(PDO::FETCH_ASSOC);
+
+    // ✅ ดึง gifts
+    $stmtGifts = $pdo->prepare("SELECT * FROM sale_order_gifts WHERE order_id = ?");
+    $stmtGifts->execute([$order_id]);
+    $gifts = $stmtGifts->fetchAll(PDO::FETCH_ASSOC);
+
+    // ✅ ดึงที่อยู่จัดส่งล่าสุด
+    $stmtAddress = $pdo->prepare("SELECT * FROM so_delivery_address WHERE order_id = ? ORDER BY id DESC LIMIT 1");
+    $stmtAddress->execute([$order_id]);
+    $address = $stmtAddress->fetch(PDO::FETCH_ASSOC);
+
+    // ✅ ประกอบ productList โดยฝัง promotions/gifts ต่อ item (logic เหมือน get_sale_order.php)
+    $productList = [];
+
+    foreach ($items as $item) {
+        $activityId = $item['pro_activity_id'];
+        // ถ้าคอลัมน์ st เก็บเป็น 0/1 หรือ '0'/'1' จะ cast เป็น bool ได้
+        $itemSt = (bool)$item['st'];
+
+        $matchedPromotions = [];
+        $matchedGifts = [];
+
+        if ($itemSt === true) {
+            // st === true → match ตาม activity เดียวกัน
+            $matchedPromotions = array_values(array_filter($promotions, function ($p) use ($order_id, $activityId, $itemSt) {
+                return (int)$p['order_id'] === (int)$order_id
+                    && (string)$p['pro_activity_id'] === (string)$activityId
+                    && (bool)$p['st'] === $itemSt;
+            }));
+            $matchedGifts = array_values(array_filter($gifts, function ($g) use ($order_id, $activityId, $itemSt) {
+                return (int)$g['order_id'] === (int)$order_id
+                    && (string)$g['pro_activity_id'] === (string)$activityId
+                    && (bool)$g['st'] === $itemSt;
+            }));
+        } else {
+            // st === false → promotions ไม่เช็ค activity, gifts ต้อง activity != ของ item
+            $matchedPromotions = array_values(array_filter($promotions, function ($p) use ($order_id, $itemSt) {
+                return (int)$p['order_id'] === (int)$order_id
+                    && (bool)$p['st'] === $itemSt;
+            }));
+            $matchedGifts = array_values(array_filter($gifts, function ($g) use ($order_id, $activityId, $itemSt) {
+                return (int)$g['order_id'] === (int)$order_id
+                    && (string)$g['pro_activity_id'] != (string)$activityId
+                    && (bool)$g['st'] === $itemSt;
+            }));
+        }
+
+        $productList[] = [
+            'id'                  => (int)$item['id'],
+            'pro_sku_price_id'    => $item['pro_id'],
+            'pro_erp_title'       => ($item['pro_name'] == "0" || empty($item['pro_name'])) ? $item['pro_title'] : $item['pro_name'],
+            'pro_title'           => $item['pro_title'],
+            'pro_sn'              => $item['sn'],
+            'pro_goods_sku_text'  => $item['pro_goods_sku_text'],
+            'pro_goods_num'       => $item['qty'],
+            'unit_price'          => (float)$item['unit_price'],
+            'discount'            => (float)$item['discount'],
+            'total_price'         => (float)$item['total_price'],
+            'pro_image'           => $item['pro_images'],
+            'pro_units'           => $item['unit'],
+            'pro_goods_id'        => $item['pro_goods_id'],
+            'st'                  => $itemSt,
+            'stock'               => $item['stock'],
+            'pro_activity_id'     => $activityId,
+            'activity_id'         => $item['activity_id'],
+            'promotions'          => $matchedPromotions,
+            'gifts'               => $matchedGifts,
+        ];
+    }
+
+    // ✅ ตอบกลับแบบเดียวกับ get_sale_order
     $response['success'] = true;
     $response['message'] = "อัปเดตรายการเรียบร้อยแล้ว";
+    $response['data'] = [
+        'order'           => $orderData,
+        'productList'     => $productList,
+        'deliveryAddress' => $address,
+        // 'promotions' => $promotions,
+        // 'gifts' => $gifts,
+    ];
+
+
+    // $response['success'] = true;
+    // $response['message'] = "อัปเดตรายการเรียบร้อยแล้ว";
     $response['newDocumentNo'] = $newDocumentNo;
     // $response['newDocumentNo'] = $documentNo;
 } catch (Exception $e) {

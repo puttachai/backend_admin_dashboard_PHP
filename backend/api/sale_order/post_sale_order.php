@@ -35,13 +35,13 @@ try {
         // ✅ ถ้ายังไม่มี order นี้ ให้สร้างใหม่
         $stmtInsertOrder = $pdo->prepare("INSERT INTO sale_order (
             document_no, list_code, sell_date, reference, channel, tax_type, 
-            full_name, customer_code, phone, email, address, 
+            full_name, account_user, nickname_admin, sale_no, customer_code, phone, email, address, 
             receiver_name, receiver_phone, receiver_email, receiver_address, note, work_detail, 
             delivery_date, tracking_no, delivery_type, total_discount, delivery_fee, 
             discount_qty, final_total_price, 
             price_before_tax, tax_value, price_with_tax,
             vat_visible
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $stmtInsertOrder->execute([
             $documentNo,
@@ -51,6 +51,9 @@ try {
             $_POST['channel'] ?? '',
             $_POST['taxType'] ?? '',
             $_POST['fullName'] ?? '',
+            $_POST['account'] ?? '', //
+            $_POST['nickname_admin'] ?? '', //
+            $_POST['sale_no'] ?? '', //
             $_POST['customerCode'] ?? '',
             $_POST['phone'] ?? '',
             $_POST['email'] ?? '',
@@ -104,7 +107,7 @@ try {
         // ✅ ทำการอัปเดตคำสั่งขายเดิม
         $stmt = $pdo->prepare("UPDATE sale_order SET 
             list_code = ?, sell_date = ?, reference = ?, channel = ?, tax_type = ?, 
-            full_name = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
+            full_name = ?, account_user = ?, nickname_admin = ?, sale_no = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
             receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, work_detail = ?,
             delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
             discount_qty = ?,final_total_price = ?,
@@ -117,6 +120,9 @@ try {
             $_POST['channel'] ?? '',
             $_POST['taxType'] ?? '',
             $_POST['fullName'] ?? '',
+            $_POST['account'] ?? '', //
+            $_POST['nickname_admin'] ?? '', //
+            $_POST['sale_no'] ?? '', //
             $_POST['customerCode'] ?? '',
             $_POST['phone'] ?? '',
             $_POST['email'] ?? '',
@@ -589,8 +595,147 @@ try {
     //     }
     // }
 
+    //  ดึงข้อมูล order ล่าสุดและส่งกลับ
+    $stmt = $pdo->prepare("SELECT * FROM sale_order WHERE id = ?");
+    $stmt->execute([$order_id]);
+    $orderData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$orderData) {
+        throw new Exception("ไม่พบคำสั่งขายที่เพิ่งบันทึก");
+    }
+
+    // 👉 แปลงวันที่สำหรับแสดงผล
+    $orderData['sell_date']     = convertDateToMySQLFormat($orderData['sell_date']);
+    $orderData['delivery_date'] = convertDateToMySQLFormat($orderData['delivery_date']);
+
+    // ✅ ดึงสินค้า
+    $stmtItems = $pdo->prepare("SELECT * FROM sale_order_items WHERE order_id = ?");
+    $stmtItems->execute([$order_id]);
+    $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+
+    // ✅ ดึง promotions
+    $stmtPromos = $pdo->prepare("SELECT * FROM sale_order_promotions WHERE order_id = ?");
+    $stmtPromos->execute([$order_id]);
+    $promotions = $stmtPromos->fetchAll(PDO::FETCH_ASSOC);
+
+    // ✅ ดึง gifts
+    $stmtGifts = $pdo->prepare("SELECT * FROM sale_order_gifts WHERE order_id = ?");
+    $stmtGifts->execute([$order_id]);
+    $gifts = $stmtGifts->fetchAll(PDO::FETCH_ASSOC);
+
+    // ✅ ดึงที่อยู่จัดส่งล่าสุด
+    $stmtAddress = $pdo->prepare("SELECT * FROM so_delivery_address WHERE order_id = ? ORDER BY id DESC LIMIT 1");
+    $stmtAddress->execute([$order_id]);
+    $address = $stmtAddress->fetch(PDO::FETCH_ASSOC);
+
+    // ✅ ประกอบ productList โดยฝัง promotions/gifts ต่อ item (logic เหมือน get_sale_order.php)
+    $productList = [];
+
+    foreach ($items as $item) {
+        $activityId = $item['pro_activity_id'];
+        // ถ้าคอลัมน์ st เก็บเป็น 0/1 หรือ '0'/'1' จะ cast เป็น bool ได้
+        $itemSt = (bool)$item['st'];
+
+        $matchedPromotions = [];
+        $matchedGifts = [];
+
+        if ($itemSt === true) {
+            // st === true → match ตาม activity เดียวกัน
+            $matchedPromotions = array_values(array_filter($promotions, function ($p) use ($order_id, $activityId, $itemSt) {
+                return (int)$p['order_id'] === (int)$order_id
+                    && (string)$p['pro_activity_id'] === (string)$activityId
+                    && (bool)$p['st'] === $itemSt;
+            }));
+            $matchedGifts = array_values(array_filter($gifts, function ($g) use ($order_id, $activityId, $itemSt) {
+                return (int)$g['order_id'] === (int)$order_id
+                    && (string)$g['pro_activity_id'] === (string)$activityId
+                    && (bool)$g['st'] === $itemSt;
+            }));
+        } else {
+            // st === false → promotions ไม่เช็ค activity, gifts ต้อง activity != ของ item
+            $matchedPromotions = array_values(array_filter($promotions, function ($p) use ($order_id, $itemSt) {
+                return (int)$p['order_id'] === (int)$order_id
+                    && (bool)$p['st'] === $itemSt;
+            }));
+            $matchedGifts = array_values(array_filter($gifts, function ($g) use ($order_id, $activityId, $itemSt) {
+                return (int)$g['order_id'] === (int)$order_id
+                    && (string)$g['pro_activity_id'] != (string)$activityId
+                    && (bool)$g['st'] === $itemSt;
+            }));
+        }
+
+        $productList[] = [
+            'id'                  => (int)$item['id'],
+            'pro_sku_price_id'    => $item['pro_id'],
+            'pro_erp_title'       => ($item['pro_name'] == "0" || empty($item['pro_name'])) ? $item['pro_title'] : $item['pro_name'],
+            'pro_title'           => $item['pro_title'],
+            'pro_sn'              => $item['sn'],
+            'pro_goods_sku_text'  => $item['pro_goods_sku_text'],
+            'pro_goods_num'       => $item['qty'],
+            'unit_price'          => (float)$item['unit_price'],
+            'discount'            => (float)$item['discount'],
+            'total_price'         => (float)$item['total_price'],
+            'pro_image'           => $item['pro_images'],
+            'pro_units'           => $item['unit'],
+            'pro_goods_id'        => $item['pro_goods_id'],
+            'st'                  => $itemSt,
+            'stock'               => $item['stock'],
+            'pro_activity_id'     => $activityId,
+            'activity_id'         => $item['activity_id'],
+            'promotions'          => $matchedPromotions,
+            'gifts'               => $matchedGifts,
+        ];
+    }
+
+    // ✅ ตอบกลับแบบเดียวกับ get_sale_order
     $response['success'] = true;
     $response['message'] = "อัปเดตรายการเรียบร้อยแล้ว";
+    $response['data'] = [
+        'order'           => $orderData,
+        'productList'     => $productList,
+        'deliveryAddress' => $address,
+        'promotions' => $promotions,
+        'gifts' => $gifts,
+    ];
+       // ✅ ดึงข้อมูล order ล่าสุดและส่งกลับ
+    // $stmt = $pdo->prepare("SELECT * FROM sale_order WHERE id = ?");
+    // $stmt->execute([$order_id]);
+    // $orderData = $stmt->fetch(PDO::FETCH_ASSOC);
+    // $orderData['sell_date'] = convertDateToMySQLFormat($orderData['sell_date']);
+    // $orderData['delivery_date'] = convertDateToMySQLFormat($orderData['delivery_date']);
+
+    // // ดึงสินค้า
+    // $stmtItems = $pdo->prepare("SELECT * FROM sale_order_items WHERE order_id = ?");
+    // $stmtItems->execute([$order_id]);
+    // $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+
+    // // ดึง promotions
+    // $stmtPromos = $pdo->prepare("SELECT * FROM sale_order_promotions WHERE order_id = ?");
+    // $stmtPromos->execute([$order_id]);
+    // $promotions = $stmtPromos->fetchAll(PDO::FETCH_ASSOC);
+
+    // // ดึง gifts
+    // $stmtGifts = $pdo->prepare("SELECT * FROM sale_order_gifts WHERE order_id = ?");
+    // $stmtGifts->execute([$order_id]);
+    // $gifts = $stmtGifts->fetchAll(PDO::FETCH_ASSOC);
+
+    // // ดึงที่อยู่
+    // $stmtAddress = $pdo->prepare("SELECT * FROM so_delivery_address WHERE order_id = ? ORDER BY id DESC LIMIT 1");
+    // $stmtAddress->execute([$order_id]);
+    // $address = $stmtAddress->fetch(PDO::FETCH_ASSOC);
+
+    // $response['success'] = true;
+    // $response['message'] = "อัปเดตรายการเรียบร้อยแล้ว";
+    // $response['data'] = [
+    //     'order' => $orderData,
+    //     'productList' => $items,
+    //     'promotions' => $promotions,
+    //     'gifts' => $gifts,
+    //     'deliveryAddress' => $address
+    // ];
+
+    // $response['success'] = true;
+    // $response['message'] = "อัปเดตรายการเรียบร้อยแล้ว";
     $response['newDocumentNo'] = $documentNo;
     $response['stmtInsert2'] = $stmtInsert2;
     $response['order_id'] = $order_id;
