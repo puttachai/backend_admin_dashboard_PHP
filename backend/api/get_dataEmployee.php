@@ -5,7 +5,8 @@ header('Content-Type: application/json; charset=utf-8');
 
 // require 'conndb.php';
 
-require_once(__DIR__ . '../db/conndb.php');
+require_once(__DIR__ . '/db/conndb.php');
+// require_once(__DIR__ . '../db/conndb.php');
 
 try {
     // ดึงข้อมูล employee ทั้งหมด

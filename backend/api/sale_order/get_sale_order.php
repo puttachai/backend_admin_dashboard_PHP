@@ -1,101 +1,4 @@
- <?php
-    // header("Access-Control-Allow-Origin: *");
-    // header("Access-Control-Allow-Headers: Content-Type");
-    // header("Access-Control-Allow-Methods: GET");
-
-    // require_once('conndb.php');
-
-    // $response = [];
-
-    // function convertDateToDisplayFormat($date)
-    // {
-    //     if (!$date) return null; // กรณีวันที่ว่าง
-    //     $parts = explode('-', $date); // แยกวันที่ด้วย "-"
-    //     if (count($parts) === 3) {
-    //         return "{$parts[2]}/{$parts[1]}/{$parts[0]}"; // จัดเรียงใหม่เป็น DD/MM/YYYY
-    //     }
-    //     return null; // กรณีรูปแบบไม่ถูกต้อง
-    // }
-
-    // try {
-    //     $documentNo = $_GET['documentNo'] ?? '';
-    //     if (empty($documentNo)) {
-    //         throw new Exception("ไม่พบ documentNo");
-    //     }
-
-    //     // ดึงข้อมูลจากตาราง sale_order
-    //     $stmt = $pdo->prepare("SELECT * FROM sale_order WHERE document_no = ?");
-    //     $stmt->execute([$documentNo]);
-    //     $order = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    //     if (!$order) {
-    //         throw new Exception("ไม่พบข้อมูลสำหรับ documentNo นี้");
-    //     }
-
-    //     // แปลงวันที่ในข้อมูล order
-    //     $order['sell_date'] = convertDateToDisplayFormat($order['sell_date']);
-    //     $order['delivery_date'] = convertDateToDisplayFormat($order['delivery_date']);
-
-    //     // ดึงรายการสินค้า
-    //     $stmtItems = $pdo->prepare("SELECT * FROM sale_order_items WHERE order_id = ?");
-    //     $stmtItems->execute([$order['id']]);
-    //     $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
-
-    //     // เตรียมข้อมูลสินค้า + รวม promotions และ gifts ต่อ item
-    //     // $productList = [];
-
-    //     // foreach ($items as $item) {
-    //     //     $itemId = $item['id']; // ✅ item_id ในตาราง sale_order_items
-
-    //     //     // ✅ ดึง promotions ของ item นี้
-    //     //     $stmtPromo = $pdo->prepare("SELECT * FROM sale_order_promotions WHERE item_id = ?");
-    //     //     $stmtPromo->execute([$itemId]);
-    //     //     $promotions = $stmtPromo->fetchAll(PDO::FETCH_ASSOC);
-
-    //     //     // ✅ ดึง gifts ของ item นี้
-    //     //     $stmtGift = $pdo->prepare("SELECT * FROM sale_order_gifts WHERE item_id = ?");
-    //     //     $stmtGift->execute([$itemId]);
-    //     //     $gifts = $stmtGift->fetchAll(PDO::FETCH_ASSOC);
-
-    //     //     // ✅ รวมเข้าไปในแต่ละสินค้า
-    //     //     $productList[] = array_merge($item, [
-    //     //         'promotions' => $promotions,
-    //     //         'gifts' => $gifts
-    //     //     ]);
-    //     // }
-
-    //     // $response['success'] = true;
-    //     // $response['data'] = [
-    //     //     'order' => $order,
-    //     //     'productList' => $productList
-    //     // ];
-
-    //     // New Code
-    //     // ✅ ดึงโปรโมชั่น
-    //     $stmtPromotions = $pdo->prepare("SELECT title FROM sale_order_promotions WHERE order_id = ?");
-    //     $stmtPromotions->execute([$order['id']]);
-    //     $promotions = $stmtPromotions->fetchAll(PDO::FETCH_ASSOC);
-
-    //     // ✅ ดึงของแถม
-    //     $stmtGifts = $pdo->prepare("SELECT title, pro_goods_num, pro_image FROM sale_order_gifts WHERE order_id = ?");
-    //     $stmtGifts->execute([$order['id']]);
-    //     $gifts = $stmtGifts->fetchAll(PDO::FETCH_ASSOC);
-
-
-    //     $response['success'] = true;
-    //     $response['data'] = [
-    //         'order' => $order,
-    //         'productList' => $items,
-    //         'promotions' => $promotions,
-    //         'gifts' => $gifts
-    //     ];
-    // } catch (Exception $e) {
-    //     $response['success'] = false;
-    //     $response['message'] = "เกิดข้อผิดพลาด: " . $e->getMessage();
-    // }
-
-    // echo json_encode($response);
-
+<?php
 
     header("Access-Control-Allow-Origin: *");
     header("Access-Control-Allow-Headers: Content-Type");
@@ -153,6 +56,13 @@
         $stmtGifts = $pdo->prepare("SELECT * FROM sale_order_gifts WHERE order_id = ?");
         $stmtGifts->execute([$orderId]);
         $gifts = $stmtGifts->fetchAll(PDO::FETCH_ASSOC);
+
+        // ดึง Services
+        $stmtServices = $pdo->prepare("SELECT * FROM sale_order_service WHERE order_id = ?");
+        $stmtServices->execute([$orderId]);
+        $services = $stmtServices->fetchAll(PDO::FETCH_ASSOC);
+
+        // var_dump($services);die;
 
         // 5. ดึงข้อมูลที่อยู่ (Address)
         $stmtAddress = $pdo->prepare("
@@ -304,6 +214,7 @@
         $response['data'] = [
             'order' => $order,
             'productList' => $productList,
+            'services' => $services,
             // 'deliveryAddress' => $address // เพิ่มข้อมูลที่อยู่ที่ดึงมา
             'deliveryAddress' => $address // เพิ่มข้อมูลที่อยู่ที่ดึงมา
         ];

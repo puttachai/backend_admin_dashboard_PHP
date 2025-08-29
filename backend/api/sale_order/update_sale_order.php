@@ -340,6 +340,53 @@ try {
         $order_id
     ]);
 
+
+    // ====== UPDATE/INSERT Services ======   
+        $services = json_decode($_POST['services'] ?? '[]', true);
+
+        $newServiceIds = [];
+
+        if (!empty($services)) {
+            foreach ($services as $service) {
+
+                $serviceId = $service['id'] ?? 0;
+
+                $stmtCheck = $pdo->prepare("SELECT id FROM sale_order_service WHERE order_id = ? AND service_code = ?");
+                $stmtCheck->execute([$order_id, $service['service_code'] ?? '']);
+                $exist = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+                // $total_price = ($service['qty'] ?? 1) * ($service['price'] ?? 0);
+
+                if ($exist) {
+                    $stmtUpdate = $pdo->prepare("UPDATE sale_order_service SET 
+                        service_name = ?, qty = ?, price = ?,  updated_at = NOW()
+                        WHERE id = ?");
+                    $stmtUpdate->execute([
+                        $service['service_name'] ?? '',
+                        $service['qty'] ?? 1,
+                        $service['price'] ?? 0,
+                        // $total_price,
+                        $exist['id']
+                    ]);
+                    $newServiceIds[] = $exist['id'];
+                } else {
+                    $stmtInsert = $pdo->prepare("INSERT INTO sale_order_service 
+                        (order_id, service_code, service_name, qty, price, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+                    $stmtInsert->execute([
+                        $order_id,
+                        $service['service_code'] ?? '',
+                        $service['service_name'] ?? '',
+                        $service['qty'] ?? 1,
+                        $service['price'] ?? 0,
+                        // $total_price
+                    ]);
+                     $newServiceIds[] = $pdo->lastInsertId();
+                }
+            }
+        }
+
+
     // =============== UPDATE SALE_ORDER_ITEMS ===============
     $products = json_decode($_POST['productList'] ?? '[]', true);
     $newItemIds = [];
@@ -569,6 +616,14 @@ try {
         $pdo->exec("DELETE FROM sale_order_items WHERE order_id = $order_id AND id NOT IN ($idsStr)");
     }
 
+    // ✅ ลบ service ที่ไม่อยู่ใน newServiceIds หรือถ้าไม่มี service เลย → ลบทั้งหมด
+    if (empty($newServiceIds)) {
+        $pdo->exec("DELETE FROM sale_order_service WHERE order_id = $order_id");
+    } else {
+        $idsStr = implode(',', array_map('intval', $newServiceIds));
+        $pdo->exec("DELETE FROM sale_order_service WHERE order_id = $order_id AND id NOT IN ($idsStr)");
+    }
+
     // =============== PROMOTIONS ===============
     $promotions = json_decode($_POST['promotions'] ?? '[]', true);
     $newPromoIds = [];
@@ -666,31 +721,36 @@ try {
         throw new Exception("ไม่พบคำสั่งขายที่เพิ่งบันทึก");
     }
 
-    // 👉 แปลงวันที่สำหรับแสดงผล
+    // แปลงวันที่สำหรับแสดงผล
     $orderData['sell_date']     = convertDateToMySQLFormat($orderData['sell_date']);
     $orderData['delivery_date'] = convertDateToMySQLFormat($orderData['delivery_date']);
 
-    // ✅ ดึงสินค้า
+    // ดึงสินค้า
     $stmtItems = $pdo->prepare("SELECT * FROM sale_order_items WHERE order_id = ?");
     $stmtItems->execute([$order_id]);
     $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
 
-    // ✅ ดึง promotions
+    // ดึง promotions
     $stmtPromos = $pdo->prepare("SELECT * FROM sale_order_promotions WHERE order_id = ?");
     $stmtPromos->execute([$order_id]);
     $promotions = $stmtPromos->fetchAll(PDO::FETCH_ASSOC);
 
-    // ✅ ดึง gifts
+    // ดึง gifts
     $stmtGifts = $pdo->prepare("SELECT * FROM sale_order_gifts WHERE order_id = ?");
     $stmtGifts->execute([$order_id]);
     $gifts = $stmtGifts->fetchAll(PDO::FETCH_ASSOC);
 
-    // ✅ ดึงที่อยู่จัดส่งล่าสุด
+    // ดึงที่อยู่จัดส่งล่าสุด
     $stmtAddress = $pdo->prepare("SELECT * FROM so_delivery_address WHERE order_id = ? ORDER BY id DESC LIMIT 1");
     $stmtAddress->execute([$order_id]);
     $address = $stmtAddress->fetch(PDO::FETCH_ASSOC);
 
-    // ✅ ประกอบ productList โดยฝัง promotions/gifts ต่อ item (logic เหมือน get_sale_order.php)
+    // ดึง Services
+    $stmtServices = $pdo->prepare("SELECT * FROM sale_order_service WHERE order_id = ?");
+    $stmtServices->execute([$order_id]);
+    $services = $stmtServices->fetchAll(PDO::FETCH_ASSOC);
+
+    // ประกอบ productList โดยฝัง promotions/gifts ต่อ item (logic เหมือน get_sale_order.php)
     $productList = [];
 
     foreach ($items as $item) {
@@ -755,6 +815,7 @@ try {
     $response['data'] = [
         'order'           => $orderData,
         'productList'     => $productList,
+        'services'     => $services,
         'deliveryAddress' => $address,
         // 'promotions' => $promotions,
         // 'gifts' => $gifts,
