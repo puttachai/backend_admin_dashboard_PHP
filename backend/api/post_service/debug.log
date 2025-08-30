@@ -1,0 +1,8 @@
+Payload: {"ServiceCode":"4320101"}
+Response: {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.1","title":"One or more validation errors occurred.","status":400,"errors":{"ServiceCode":["The ServiceCode field is required."]},"traceId":"00-2869b4e41c9258eb59e09b816a453ea1-69376d6ef2f3d69f-00"}
+Payload: {"ServiceCode":"4320101"}
+Response: {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.1","title":"One or more validation errors occurred.","status":400,"errors":{"ServiceCode":["The ServiceCode field is required."]},"traceId":"00-286af859a0d60dfe2abdd381b12b31c6-9f49d4a4ad90bafa-00"}
+Payload: {"ServiceCode":"4320101"}
+Response: {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.1","title":"One or more validation errors occurred.","status":400,"errors":{"ServiceCode":["The ServiceCode field is required."]},"traceId":"00-3c96cf003b59620f8a5944b42487ccc5-b08172af0f8619e5-00"}
+Payload: {"serviceCode":"4320101"}
+Response: {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.1","title":"One or more validation errors occurred.","status":400,"errors":{"ServiceCode":["The ServiceCode field is required."]},"traceId":"00-9aa48f66b67008562d1787b6784695b0-f09c06d38630c6ba-00"}

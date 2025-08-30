@@ -4,7 +4,7 @@ header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: POST");
 
 // require 'conndb.php';
-require_once(__DIR__ . '../db/conndb.php');
+require_once(__DIR__ . '/db/conndb.php');
 
 // ตรวจสอบว่ามีฟิลด์จำเป็นครบหรือไม่
 $requiredFields = ['emp_ids', 'fullName', 'password', 'phone', 'customer_no'];
@@ -43,8 +43,8 @@ if (!is_dir($uploadDir)) {
 
 if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePathOnServer)) {
     // สร้าง URL สำหรับเก็บลงฐานข้อมูล
-    $imagePath = 'http://localhost/api_admin_dashboard/backend/img/profile/' . $imageName;
-    // $imagePath = 'http://localhost/api_admin_dashboard/backend/img/profile/' . $imageName;
+    $imagePath = 'http://localhost:8000/api_admin_dashboard/backend/img/profile/' . $imageName;
+    // $imagePath = 'https://backend2.d-power.online:56916/api_admin_dashboard/backend/img/profile/' . $imageName;
 } else {
     echo json_encode(["success" => false, "message" => "Failed to upload image."]);
     exit;
