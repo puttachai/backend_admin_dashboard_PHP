@@ -44,7 +44,7 @@ if (!is_dir($uploadDir)) {
 if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePathOnServer)) {
     // สร้าง URL สำหรับเก็บลงฐานข้อมูล
     $imagePath = 'http://localhost:8000/api_admin_dashboard/backend/img/profile/' . $imageName;
-    // $imagePath = 'https://backend2.d-power.online:56916/api_admin_dashboard/backend/img/profile/' . $imageName;
+    // $imagePath = 'https://api-sale.dpower.co.th/api_admin_dashboard/backend/img/profile/' . $imageName;
 } else {
     echo json_encode(["success" => false, "message" => "Failed to upload image."]);
     exit;

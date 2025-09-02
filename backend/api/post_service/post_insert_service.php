@@ -30,7 +30,7 @@ try {
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "Accept: application/json",
         "Content-Type: application/x-www-form-urlencoded", // ใช้ form-urlencoded
-        "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJKd3RTdWJqZWN0IiwianRpIjoiOTVhNjI0NGMtOTY0Yi00YTE3LTk0OGItYmQ3ZjZkMWE2ZTlmIiwiVXNlck5hbWUiOiJEUG93ZXIxIiwiVXNlcklEIjoiMiIsIlJvbGVzIjoiVXNlciIsIlBlcm1pc3Npb25zIjoiIiwiTWVudVBlcm1pc3Npb25zIjoiIiwiZXhwIjoxNzU2NTQ3NzAzLCJpc3MiOiJKd3RJc3N1ZXIiLCJhdWQiOiJKd3RBdWRpZW5jZSJ9.V8FndZpfrBOPjtmjVlb6W0HepcorkZaypZiJ3NcjSU0"
+        "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJKd3RTdWJqZWN0IiwianRpIjoiMzAxM2JiZDktYjM0NC00MjFkLWIyZGItYzczMDBjY2QyMWJmIiwiVXNlck5hbWUiOiJEUG93ZXIxIiwiVXNlcklEIjoiMiIsIlJvbGVzIjoiVXNlciIsIlBlcm1pc3Npb25zIjoiIiwiTWVudVBlcm1pc3Npb25zIjoiIiwiZXhwIjoxNzU2NzE2NTYyLCJpc3MiOiJKd3RJc3N1ZXIiLCJhdWQiOiJKd3RBdWRpZW5jZSJ9.-KHGR5qBhYAW0k881FmtMhe-a9cCk6UhTXccLfA_xjU"
     ]);
 
     $result = curl_exec($ch);
@@ -44,17 +44,24 @@ try {
         throw new Exception("ไม่สามารถ decode ข้อมูลจาก API ได้: $result");
     }
 
+    // var_dump($servicesData);die;
+
     // ---- 3. Loop ข้อมูลมา insert/update ----
 foreach ($servicesData as $service) {
 
     $code = $service['service_code'] ?? '';
     $code = trim(preg_replace('/[\r\n\t]+/', '', $code));
     $name = trim($service['service_name'] ?? '');
+    $code2 = trim($service['service_code2'] ?? '');
+    $code2 = trim(preg_replace('/[\r\n\t]+/', '', $code2));
+    $unit = trim($service['service_unit'] ?? '');
+    $psi = trim($service['service_psi'] ?? '');
 
-    if ($code === '') {
-        // ถ้าไม่มี code → ข้าม
-        continue;
-    }
+    // var_dump('Check services:' . $code . $name . $code2 . $unit . $psi);die;
+    // if ($code === '') {
+    //     // ถ้าไม่มี code → ข้าม
+    //     continue;
+    // }
 
     // ตรวจสอบว่ามี service_code อยู่แล้ว
     $stmtCheck = $pdo->prepare("SELECT id FROM mst_so_service WHERE service_code = ?");
@@ -68,10 +75,13 @@ foreach ($servicesData as $service) {
 
     // ถ้าไม่มี → ทำการ insert
     $stmtIns = $pdo->prepare("INSERT INTO mst_so_service 
-                                (service_code, service_name, qty, price)
-                                VALUES (?, ?, ?, ?)");
+                                (service_code, service_code2, service_unit, service_psi, service_name, qty, price)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)");
     $stmtIns->execute([
         $code,
+        $code2 ?: $code,
+        $unit,
+        $psi,
         $name,
         $service['qty'] ?? 1,
         $service['price'] ?? 100
@@ -79,10 +89,13 @@ foreach ($servicesData as $service) {
 }
 
 
+
     // ---- 4. ดึงข้อมูลออกมาเพื่อส่งกลับ ----
     $stmtServices = $pdo->prepare("SELECT * FROM mst_so_service ");
     $stmtServices->execute();
     $services = $stmtServices->fetchAll(PDO::FETCH_ASSOC);
+
+    // var_dump('Check services:' . $services);die;
 
     $response['success'] = true;
     $response['message'] = "อัปเดตรายการเรียบร้อยแล้ว";

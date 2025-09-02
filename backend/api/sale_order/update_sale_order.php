@@ -299,12 +299,12 @@ try {
     // $documentNo = $newDocumentNo;
 
 
-    // อัปเดตคำสั่งขายหลัก
+    // อัปเดตคำสั่งขายหลัก //delivery_fee = ?,
     $stmt = $pdo->prepare("UPDATE sale_order SET 
         list_code = ?, sell_date = ?, reference = ?, channel = ?, tax_type = ?, 
         full_name = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
         receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, work_detail = ?,
-        delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
+        delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, services_total = ?,
         final_total_price = ?,
         price_before_tax = ?, tax_value = ?, price_with_tax = ?,
         vat_visible = ?
@@ -330,7 +330,8 @@ try {
         $_POST['trackingNo'] ?? '',
         $_POST['deliveryType'] ?? '',
         $_POST['totalDiscount'] ?? 0,
-        $_POST['deliveryFee'] ?? 0,
+        $_POST['servicesTotal'] ?? 0,
+        // $_POST['deliveryFee'] ?? 0,
         $_POST['final_total_price'] ?? 0,
         //
         $_POST['price_before_tax'] ?? 0,
@@ -359,9 +360,13 @@ try {
 
                 if ($exist) {
                     $stmtUpdate = $pdo->prepare("UPDATE sale_order_service SET 
-                        service_name = ?, qty = ?, price = ?,  updated_at = NOW()
+                        service_code = ?, service_code2 = ?, service_unit = ?, service_psi = ?, service_name = ?, qty = ?, price = ?,  updated_at = NOW()
                         WHERE id = ?");
                     $stmtUpdate->execute([
+                        $service['service_code'],
+                        $service['service_code2'],
+                        $service['service_unit'],
+                        $service['service_psi'],
                         $service['service_name'] ?? '',
                         $service['qty'] ?? 1,
                         $service['price'] ?? 0,
@@ -371,11 +376,14 @@ try {
                     $newServiceIds[] = $exist['id'];
                 } else {
                     $stmtInsert = $pdo->prepare("INSERT INTO sale_order_service 
-                        (order_id, service_code, service_name, qty, price, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+                        (order_id, service_code, service_code2, service_unit, service_psi, service_name, qty, price, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
                     $stmtInsert->execute([
                         $order_id,
-                        $service['service_code'] ?? '',
+                        $service['service_code'],
+                        $service['service_code2'],
+                        $service['service_unit'],
+                        $service['service_psi'],
                         $service['service_name'] ?? '',
                         $service['qty'] ?? 1,
                         $service['price'] ?? 0,

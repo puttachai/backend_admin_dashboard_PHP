@@ -32,12 +32,12 @@ try {
     $order = $stmtOrder->fetch(PDO::FETCH_ASSOC);
 
     if (!$order) {
-        // ✅ ถ้ายังไม่มี order นี้ ให้สร้างใหม่
+        // ✅ ถ้ายังไม่มี order นี้ ให้สร้างใหม่ // delivery_fee, 
         $stmtInsertOrder = $pdo->prepare("INSERT INTO sale_order (
             document_no, list_code, sell_date, reference, channel, tax_type, 
             full_name, account_user, nickname_admin, sale_no, customer_code, phone, email, address, 
             receiver_name, receiver_phone, receiver_email, receiver_address, note, work_detail, 
-            delivery_date, tracking_no, delivery_type, total_discount, delivery_fee, 
+            delivery_date, tracking_no, delivery_type, total_discount, services_total ,
             discount_qty, final_total_price, 
             price_before_tax, tax_value, price_with_tax,
             vat_visible
@@ -69,7 +69,8 @@ try {
             $_POST['deliveryType'] ?? '',
 
             $_POST['totalDiscount'] ?? 0,
-            $_POST['deliveryFee'] ?? 0,
+            $_POST['servicesTotal'] ?? 0,    
+            // $_POST['deliveryFee'] ?? 0,    
             $_POST['pro_discount'] ?? 0,
             $_POST['final_total_price'] ?? 0,
             //
@@ -104,12 +105,12 @@ try {
     } else {
         $order_id = $order['id'];
 
-        // ✅ ทำการอัปเดตคำสั่งขายเดิม
+        // ✅ ทำการอัปเดตคำสั่งขายเดิม // delivery_fee = ?, 
         $stmt = $pdo->prepare("UPDATE sale_order SET 
             list_code = ?, sell_date = ?, reference = ?, channel = ?, tax_type = ?, 
             full_name = ?, account_user = ?, nickname_admin = ?, sale_no = ?, customer_code = ?, phone = ?, email = ?, address = ?, 
             receiver_name = ?, receiver_phone = ?, receiver_email = ?, receiver_address = ?, note = ?, work_detail = ?,
-            delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, delivery_fee = ?, 
+            delivery_date = ?, tracking_no = ?, delivery_type = ?, total_discount = ?, services_total = ?,
             discount_qty = ?,final_total_price = ?,
             price_before_tax = ?, tax_value = ?, price_with_tax = ?, vat_visible = ?
             WHERE id = ?");
@@ -137,7 +138,8 @@ try {
             $_POST['trackingNo'] ?? '',
             $_POST['deliveryType'] ?? '',
             $_POST['totalDiscount'] ?? 0,
-            $_POST['deliveryFee'] ?? 0,
+            $_POST['servicesTotal'] ?? 0,
+            // $_POST['deliveryFee'] ?? 0,
             $_POST['pro_discount'] ?? 0,
             $_POST['final_total_price'] ?? 0,
             //
@@ -167,6 +169,9 @@ try {
         $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
         if ($existing) {
+
+            $st = !empty($product['st']) ? 1 : 0;
+
             $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
                 pro_id = ?, pro_name = ?, pro_title = ?, pro_goods_sku_text = ?, qty = ?, stock = ?, unit_price = ?, discount = ?, 
                 total_price = ?, pro_images = ?, unit = ?, st = ?, pro_activity_id = ? , activity_id = ?, pro_goods_id = ?
@@ -185,7 +190,8 @@ try {
                 $product['pro_image'] ?? '',
                 $product['pro_units'] ?? '',
                 $product['pro_sn'] ?? '',
-                $product['st'] ?? 0,
+                // $product['st'] ?? 0,
+                $st,
                 $product['pro_activity_id'] ?? 0,
                 $product['activity_id'] ?? 0,
                 $product['pro_goods_id'] ?? 0,
@@ -333,9 +339,12 @@ try {
                 }
             }
         } else {
+
+            $st = !empty($product['st']) ? 1 : 0;
+
             $stmtInsert = $pdo->prepare("INSERT INTO sale_order_items (
-    order_id, pro_id, pro_name, pro_title, pro_goods_sku_text, sn, qty, stock, unit_price, discount, total_price, pro_images, unit, st, pro_activity_id, activity_id, pro_goods_id
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                order_id, pro_id, pro_name, pro_title, pro_goods_sku_text, sn, qty, stock, unit_price, discount, total_price, pro_images, unit, st, pro_activity_id, activity_id, pro_goods_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             $stmtInsert->execute([
                 $order_id,
@@ -353,7 +362,8 @@ try {
                 $product['pro_total_price'] ?? 0,
                 $product['pro_image'] ?? '',
                 $product['pro_units'] ?? '',
-                $product['st'] ?? 0,
+                // $product['st'] ?? 0,
+                $st,
                 $product['pro_activity_id'] ?? 0,
                 $product['activity_id'] ?? 0,
                 $product['pro_goods_id'] ?? 0,
@@ -534,9 +544,12 @@ try {
                 if ($existing) {
                     // UPDATE
                     $stmtUpd = $pdo->prepare("UPDATE sale_order_service 
-                                            SET service_name = ?, qty = ?, price = ?
+                                            SET service_code2 = ?, service_unit = ?, service_psi = ?, service_name = ?, qty = ?, price = ?
                                             WHERE id = ?");
                     $stmtUpd->execute([
+                        $service['service_code2'],
+                        $service['service_unit'],
+                        $service['service_psi'],
                         $service['service_name'],
                         $service['qty'] ?? 1,
                         $service['price'] ?? 0,
@@ -547,13 +560,16 @@ try {
                      
                     // INSERT ใหม่
                     $stmtIns = $pdo->prepare("INSERT INTO sale_order_service 
-                                            (order_id, service_code, service_name, qty, price)
-                                            VALUES (?, ?, ?, ?, ?)");
+                                            (order_id, service_code, service_code2, service_unit, service_psi, service_name, qty, price)
+                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                     // var_dump($stmtIns);die;
 
                     $stmtIns->execute([
                         $order_id,
                         $service['service_code'],
+                        $service['service_code2'],
+                        $service['service_unit'],
+                        $service['service_psi'],
                         $service['service_name'],
                         $service['qty'] ?? 1,
                         $service['price'] ?? 0,
