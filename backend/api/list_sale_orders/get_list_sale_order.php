@@ -29,7 +29,9 @@ try {
             $wordConditions[] = "(REPLACE(so.document_no,' ','') LIKE $key
                                   OR REPLACE(so.customer_code,' ','') LIKE $key
                                   OR REPLACE(so.full_name,' ','') LIKE $key
-                                  OR REPLACE(so.phone,' ','') LIKE $key)";
+                                  OR REPLACE(so.phone,' ','') LIKE $key
+                                  OR REPLACE(e.customer_no,' ','') LIKE $key
+                                  OR REPLACE(e.full_name,' ','') LIKE $key)";
             $params[$key] = "%$word%";
         }
         if (count($wordConditions) > 0) {
@@ -48,14 +50,22 @@ try {
     $total = $totalStmt->fetch(PDO::FETCH_ASSOC)['cnt'];
 
     // ดึงข้อมูลหน้าที่ พร้อมเงื่อนไข search และ pagination
-    $stmt = $pdo->prepare(
-        "SELECT so.*, so.full_name AS employee_name, so.phone AS employee_phone
+     $stmt = $pdo->prepare(
+        "SELECT so.*, e.full_name AS employee_name, e.telephone AS employee_phone
         FROM sale_order so
         LEFT JOIN employee e ON so.customer_code = e.customer_no
         $whereSql
         ORDER BY so.created_at DESC
         LIMIT :limit OFFSET :offset"
     );
+    // $stmt = $pdo->prepare(
+    //     "SELECT so.*, so.full_name AS employee_name, so.phone AS employee_phone
+    //     FROM sale_order so
+    //     LEFT JOIN employee e ON so.customer_code = e.customer_no
+    //     $whereSql
+    //     ORDER BY so.created_at DESC
+    //     LIMIT :limit OFFSET :offset"
+    // );
 
     // bind params
     foreach ($params as $key => $value) {

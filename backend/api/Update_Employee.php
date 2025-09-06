@@ -6,7 +6,7 @@ header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 
 // require 'conndb.php';
-require_once(__DIR__ . '../db/conndb.php');
+require_once(__DIR__ . '/db/conndb.php');
 
 // รับค่าจาก frontend
 $data = json_decode(file_get_contents("php://input"), true);
@@ -24,9 +24,13 @@ $email = $_POST['email'] ?? '';
 $telephone = $_POST['telephone'] ?? '';
 $address = $_POST['address'] ?? '';
 $department = $_POST['department'] ?? '';
-$salary = $_POST['salary'] ?? '';
+// $salary = $_POST['salary'] ?? '';
+$salary = isset($_POST['salary']) && $_POST['salary'] !== '' 
+    ? (float)$_POST['salary'] 
+    : 0;
 $status = $_POST['status'] ?? '';
-$start_work = $_POST['start_work'] ?? '';
+// $start_work = $_POST['start_work'] ?? '';
+$start_work = !empty($_POST['start_work']) ? $_POST['start_work'] : null;
 
 // เพิ่มก่อน imagePath prepare SQL
 $imagePath = null;
@@ -42,8 +46,8 @@ if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
     }
 
     if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePathOnServer)) {
-        $imagePath = 'http://localhost/api_admin_dashboard/backend/img/profile/' . $imageName;
-        // $imagePath = 'https://backend2.d-power.online:56916/api_admin_dashboard/backend/img/profile/' . $imageName;
+        // $imagePath = 'http://localhost:8000/api_admin_dashboard/backend/img/profile/' . $imageName;
+        $imagePath = 'https://api-sale.dpower.co.th/api_admin_dashboard/backend/img/profile/' . $imageName;
     } else {
         echo json_encode(["success" => false, "message" => "Failed to upload image."]);
         exit;
