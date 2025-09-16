@@ -76,7 +76,6 @@
         //  ':customer_code' => $customerCode
         $stmtAddress->execute([
             ':order_id' => $orderId,
-
         ]);
         $address = $stmtAddress->fetch(PDO::FETCH_ASSOC);
 

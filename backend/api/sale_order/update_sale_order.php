@@ -402,6 +402,9 @@ try {
     foreach ($products as $product) {
         $itemId = $product['item_id'] ?? 0;
 
+        // $st = isset($product['st']) ? (int)$product['st'] : 0;
+         $st = !empty($product['st']) ? 1 : 0;
+
         if ($itemId > 0) { //452
             // ✏️ UPDATE รายการเดิม
             $stmtUpdate = $pdo->prepare("UPDATE sale_order_items SET 
@@ -424,7 +427,8 @@ try {
                 $product['pro_image'] ?? '',
                 // $product['pro_images'] ?? '',
                 $product['pro_units'] ?? '',
-                $product['st'] ?? 0,
+                // $product['st'] ?? 0,
+                $st,
                 $product['pro_activity_id'] ?? 0,
                 $product['activity_id'] ?? 0,
                 $product['pro_goods_id'] ?? 0,
@@ -449,6 +453,9 @@ try {
             $newItemIds[] = $itemId;
         } else {
             // 🆕 INSERT รายการใหม่
+
+            $st = !empty($product['st']) ? 1 : 0;
+
             $stmtInsert = $pdo->prepare("INSERT INTO sale_order_items (
                 order_id, pro_id, pro_goods_sku_text, pro_name, pro_title, sn, qty, stock, unit_price, discount, total_price, pro_images, unit, st, pro_activity_id, activity_id, pro_goods_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -468,7 +475,8 @@ try {
                 $product['pro_image'] ?? '',
                 // $product['pro_images'] ?? '',
                 $product['pro_units'] ?? '',
-                $product['st'] ?? 0,
+                // $product['st'] ?? 0,
+                $st,
                 $product['pro_activity_id'] ?? 0,
                 $product['activity_id'] ?? 0,
                 $product['pro_goods_id'] ?? 0,
@@ -763,8 +771,11 @@ try {
 
     foreach ($items as $item) {
         $activityId = $item['pro_activity_id'];
+        //  var_dump($item['st']);die; // Debug: ตรวจสอบค่า st
         // ถ้าคอลัมน์ st เก็บเป็น 0/1 หรือ '0'/'1' จะ cast เป็น bool ได้
         $itemSt = (bool)$item['st'];
+
+        // var_dump($itemSt);die; // Debug: ตรวจสอบค่า st
 
         $matchedPromotions = [];
         $matchedGifts = [];
