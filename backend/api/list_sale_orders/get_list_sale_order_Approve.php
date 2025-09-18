@@ -1,4 +1,4 @@
-<?php 
+<?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: GET");
@@ -31,7 +31,8 @@ try {
                                   OR REPLACE(so.full_name,' ','') LIKE $key
                                   OR REPLACE(so.phone,' ','') LIKE $key
                                   OR REPLACE(e.customer_no,' ','') LIKE $key
-                                  OR REPLACE(e.full_name,' ','') LIKE $key)";
+                                  OR REPLACE(e.full_name,' ','') LIKE $key
+                                  OR REPLACE(dc.full_name,' ','') LIKE $key)";
             $params[$key] = "%$word%";
         }
         if (count($wordConditions) > 0) {
@@ -57,21 +58,30 @@ try {
         "SELECT COUNT(*) AS cnt
          FROM sale_order so
          LEFT JOIN employee e ON so.customer_code = e.customer_no
+         LEFT JOIN customers c ON so.customer_code = c.customer_no
+         LEFT JOIN debt_collector_assignments dca ON c.id = dca.customer_id
+         LEFT JOIN debt_collectors dc ON dca.collector_id = dc.id
          $whereSql"
     );
     $totalStmt->execute($params);
     $total = intval($totalStmt->fetch(PDO::FETCH_ASSOC)['cnt']);
 
-    // --- fetch paginated data ---
+    // --- fetch paginated orders ---
+    // $stmt = $pdo->prepare(
+    //     "SELECT so.*, e.full_name AS employee_name, e.telephone AS employee_phone
+    //      FROM sale_order so
+    //      LEFT JOIN employee e ON so.customer_code = e.customer_no
+    //      $whereSql
+    //      ORDER BY so.created_at DESC
+    //      LIMIT :limit OFFSET :offset"
+    // );
     $stmt = $pdo->prepare(
-        "SELECT so.*, e.full_name AS employee_name, e.telephone AS employee_phone
-         FROM sale_order so
-         LEFT JOIN employee e ON so.customer_code = e.customer_no
-         $whereSql
-         ORDER BY so.created_at DESC
-         LIMIT :limit OFFSET :offset"
+        "SELECT so.*
+        FROM sale_order so
+        $whereSql
+        ORDER BY so.created_at DESC
+        LIMIT :limit OFFSET :offset"
     );
-
     foreach ($params as $key => $value) {
         $stmt->bindValue($key, $value);
     }
@@ -79,6 +89,63 @@ try {
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
     $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!$orders) {
+        echo json_encode([
+            "success" => true,
+            "data" => [
+                "list_order" => [],
+                "total" => $total,
+                "page" => $page,
+                "limit" => $limit
+            ]
+        ]);
+        exit;
+    }
+
+    // --- ดึง collector list สำหรับ orders ทั้งหมด ---
+    $orderIds = array_column($orders, 'id');
+    $in = implode(',', array_fill(0, count($orderIds), '?'));
+    $collectorSql = "
+       SELECT 
+            so.id AS order_id,
+            dc.id AS collector_id,
+            dc.collector_code AS collector_emp_ids,
+            dc.full_name AS collector_full_name,
+            dc.telephone AS collector_phone
+        FROM sale_order so
+        LEFT JOIN customers c ON so.customer_code = c.customer_no
+        LEFT JOIN debt_collector_assignments dca ON c.id = dca.customer_id
+        LEFT JOIN debt_collectors dc ON dca.collector_id = dc.id
+        WHERE so.id IN ($in)
+
+    ";
+    //  LEFT JOIN employee e ON so.customer_code = e.customer_no
+    $stmtCollector = $pdo->prepare($collectorSql);
+    $stmtCollector->execute($orderIds);
+    $collectorsData = $stmtCollector->fetchAll(PDO::FETCH_ASSOC);
+
+    // จัดกลุ่ม collectors ตาม order_id
+    $collectorsMap = [];
+    foreach ($collectorsData as $c) {
+        $oid = $c['order_id'];
+        if (!isset($collectorsMap[$oid])) $collectorsMap[$oid] = [];
+        $exists = false;
+        foreach ($collectorsMap[$oid] as $existC) {
+            if ($existC['id'] == $c['collector_id']) {
+                $exists = true;
+                break;
+            }
+        }
+        if (!$exists && $c['collector_id']) {
+            $collectorsMap[$oid][] = [
+                "id" => $c['collector_id'],
+                "emp_ids" => $c['collector_emp_ids'],
+                "full_name" => $c['collector_full_name'],
+                "telephone" => $c['collector_phone']
+            ];
+        }
+    }
 
     $result = [];
 
@@ -90,19 +157,6 @@ try {
         $stmtPro->execute([':order_id' => $orderId]);
         $products = $stmtPro->fetchAll(PDO::FETCH_ASSOC);
 
-        // foreach ($products as &$p) {
-        //     // promotions
-        //     $stmtPromo = $pdo->prepare("SELECT * FROM sale_order_promotions WHERE order_id = :order_id AND item_id = :item_id");
-        //     $stmtPromo->execute([':order_id' => $orderId, ':item_id' => $p['id']]);
-        //     $p['promotions'] = $stmtPromo->fetchAll(PDO::FETCH_ASSOC);
-
-        //     // gifts
-        //     $stmtGift = $pdo->prepare("SELECT * FROM sale_order_gifts WHERE order_id = :order_id AND item_id = :item_id");
-        //     $stmtGift->execute([':order_id' => $orderId, ':item_id' => $p['id']]);
-        //     $p['gifts'] = $stmtGift->fetchAll(PDO::FETCH_ASSOC);
-        // }
-
-        // --- ดึงโปรโมชั่นและของแถมทั้งหมดของออเดอร์ล่วงหน้า ---
         $stmtPromos = $pdo->prepare("SELECT * FROM sale_order_promotions WHERE order_id = :order_id");
         $stmtPromos->execute([':order_id' => $orderId]);
         $promotions = $stmtPromos->fetchAll(PDO::FETCH_ASSOC);
@@ -115,50 +169,53 @@ try {
             $activityId = $p['pro_activity_id'];
             $itemSt = (bool)$p['st'];
 
-            // เตรียม array ว่างก่อน
             $matchedPromotions = [];
             $matchedGifts = [];
 
             if ($itemSt === true) {
                 $matchedPromotions = array_filter($promotions, function ($promo) use ($orderId, $activityId, $itemSt) {
                     return $promo['order_id'] == $orderId &&
-                        $promo['pro_activity_id'] == $activityId &&
-                        (bool)$promo['st'] === $itemSt;
+                           $promo['pro_activity_id'] == $activityId &&
+                           (bool)$promo['st'] === $itemSt;
                 });
                 $matchedGifts = array_filter($gifts, function ($gift) use ($orderId, $activityId, $itemSt) {
                     return $gift['order_id'] == $orderId &&
-                        $gift['pro_activity_id'] == $activityId &&
-                        (bool)$gift['st'] === $itemSt;
+                           $gift['pro_activity_id'] == $activityId &&
+                           (bool)$gift['st'] === $itemSt;
                 });
             } else {
                 $matchedPromotions = array_filter($promotions, function ($promo) use ($orderId, $itemSt) {
                     return $promo['order_id'] == $orderId &&
-                        (bool)$promo['st'] === $itemSt;
+                           (bool)$promo['st'] === $itemSt;
                 });
                 $matchedGifts = array_filter($gifts, function ($gift) use ($orderId, $activityId, $itemSt) {
                     return $gift['order_id'] == $orderId &&
-                        $gift['pro_activity_id'] != $activityId &&
-                        (bool)$gift['st'] === $itemSt;
+                           $gift['pro_activity_id'] != $activityId &&
+                           (bool)$gift['st'] === $itemSt;
                 });
             }
 
-            // เพิ่ม promotions และ gifts ให้สินค้า
             $p['promotions'] = array_values($matchedPromotions);
             $p['gifts'] = array_values($matchedGifts);
         }
 
-
-        // --- services ---
         $stmtService = $pdo->prepare("SELECT * FROM sale_order_service WHERE order_id = :order_id");
         $stmtService->execute([':order_id' => $orderId]);
         $services = $stmtService->fetchAll(PDO::FETCH_ASSOC);
 
-        // เพิ่ม promotions และ gifts ลงในข้อมูล order
-        $order['promotions'] = $p['promotions'];
-        $order['gifts'] = $p['gifts'];
+        // --- attach collector_list ---
+        $order['collector_list'] = $collectorsMap[$orderId] ?? [];
+
+            // --- collector_list อยู่ข้างนอกระดับเดียวกับ order ---
+        $collector_list = $collectorsMap[$orderId] ?? [];
+
+        // เพิ่ม promotions และ gifts ลงใน order
+        $order['promotions'] = $products ? $products[0]['promotions'] : [];
+        $order['gifts'] = $products ? $products[0]['gifts'] : [];
 
         $result[] = [
             "order" => $order,
+            "collector_list" => $collector_list,  // <-- ตรงนี้อยู่ข้างนอก
             "productList" => $products,
             "services" => $services,
             "deliveryAddress" => false

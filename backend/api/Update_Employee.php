@@ -220,6 +220,7 @@ if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
     $imagePathOnServer = $uploadDir . $imageName;
     if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePathOnServer)) {
         $imagePath = 'http://localhost:8000/api_admin_dashboard/backend/img/profile/' . $imageName;
+        // $imagePath = 'https://api-sale.dpower.co.th/api_admin_dashboard/backend/img/profile/' . $imageName;
     }
 } else {
     // ถ้าไม่มีรูป → ใช้ default
@@ -234,12 +235,15 @@ if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
             $imageName = uniqid() . '_default.jpg';
             copy($defaultFile, $uploadDir . $imageName);
             $imagePath = 'http://localhost:8000/api_admin_dashboard/backend/img/profile/' . $imageName;
+            // $imagePath = 'https://api-sale.dpower.co.th/api_admin_dashboard/backend/img/profile/' . $imageName;
         }
     }
 }
 
 // รับข้อมูลลูกค้าหลายร้าน
 $customers = isset($data['customers']) ? json_decode($data['customers'], true) : [];
+
+// var_dump($customers);die;
 
 $customer_no_list = [];
 $customer_name_list = [];
@@ -275,10 +279,16 @@ try {
         ':image_path'     => $imagePath,
     ]);
 
+    // var_dump($stmtCollector);die;
+
+    // var_dump('dasdas');die;
+
     // ✅ ดึง collector_id จริง
     $stmtGetCollectorId = $pdo->prepare("SELECT id FROM debt_collectors WHERE collector_code = :collector_code LIMIT 1");
     $stmtGetCollectorId->execute([':collector_code' => $emp_ids]);
     $collectorId = $stmtGetCollectorId->fetchColumn();
+
+    // var_dump($collectorId);die;
 
     // 2️⃣ ดึง customer_no ปัจจุบันของ employee
     $stmtCurrent = $pdo->prepare("SELECT customer_no FROM employee WHERE id = :id");
@@ -286,14 +296,19 @@ try {
     $currentCustomerCsv = $stmtCurrent->fetchColumn();
     $currentCustomers = $currentCustomerCsv ? explode(',', $currentCustomerCsv) : [];
 
+    
+
     // 3️⃣ เตรียม customer_no ใหม่
     $newCustomerNos = [];
     foreach ($customers as $cust) {
         if (!empty($cust['customer_no'])) $newCustomerNos[] = $cust['customer_no'];
     }
+    // var_dump('asdad');die;
 
     // 4️⃣ หาลูกค้าที่ถูกลบ
     $removedCustomerNos = array_diff($currentCustomers, $newCustomerNos);
+
+    
 
     // 5️⃣ ลบความสัมพันธ์ใน Debt_Collector_Assignments
     if (!empty($removedCustomerNos)) {
@@ -307,22 +322,46 @@ try {
         $stmtDelAssignments->execute(array_merge([$collectorId], $removedCustomerNos));
     }
 
+    // var_dump($removedCustomerNos);
+
     // 6️⃣ ลบลูกค้าที่ไม่มี collector ใดเชื่อมต่อ
-    if (!empty($removedCustomerNos)) {
+    if (!empty($removedCustomerNos) && is_array($removedCustomerNos)) {
+        // รีเซ็ต index
+        $removedCustomerNos = array_values($removedCustomerNos);
+
+        // แปลงค่าเป็นสตริง (ถ้าจำเป็น)
+        $removedCustomerNos = array_map('strval', $removedCustomerNos);
+
         $inQuery = implode(',', array_fill(0, count($removedCustomerNos), '?'));
-        $stmtDelCustomers = $pdo->prepare("
+
+        $sql = "
             DELETE FROM customers
             WHERE customer_no IN ($inQuery)
             AND id NOT IN (SELECT customer_id FROM Debt_Collector_Assignments)
-        ");
+        ";
+        $stmtDelCustomers = $pdo->prepare($sql);
         $stmtDelCustomers->execute($removedCustomerNos);
     }
+
+    // if (!empty($removedCustomerNos)) {
+    //     $inQuery = implode(',', array_fill(0, count($removedCustomerNos), '?'));
+    //     $stmtDelCustomers = $pdo->prepare("
+    //         DELETE FROM customers
+    //         WHERE customer_no IN ($inQuery)
+    //         AND id NOT IN (SELECT customer_id FROM Debt_Collector_Assignments)
+    //     ");
+    //     $stmtDelCustomers->execute($removedCustomerNos);
+    // }
+    
 
     // 7️⃣ เพิ่ม/อัปเดตลูกค้าใหม่และสร้างความสัมพันธ์
     $stmtGetCustomerId = $pdo->prepare("SELECT id FROM customers WHERE customer_no = :customer_no LIMIT 1");
     $lastCustomerId = null;
 
+    
+
     foreach ($customers as $cust) {
+
         $custNo   = $cust['customer_no'] ?? null;
         $custName = $cust['nickname'] ?? '';
         if (!$custNo) continue;
@@ -404,6 +443,8 @@ try {
         ':customer_name' => $customer_name_csv,
         ':image_path'    => $imagePath,
     ]);
+
+    // var_dump($stmtEmployee);die;
 
     $pdo->commit();
 
